@@ -349,7 +349,7 @@ func (s *Store) Active() (Conn, bool) {
 }
 
 // names lists the known engine kinds, in display order.
-var kinds = []string{"sqlite", "mysql", "postgres", "mssql", "oracle", "redis"}
+var kinds = append([]string{"sqlite", "mysql", "postgres", "mssql"}, append(kindsExtra(), "redis")...)
 
 func defaultPort(kind string) int {
 	switch kind {

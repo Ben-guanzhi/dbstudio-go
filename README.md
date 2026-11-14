@@ -45,6 +45,20 @@ PostgreSQL · MySQL · SQL Server · Oracle · SQLite · Redis (KV) · DM
 .\build.ps1 release -Target all -Version 0.1.0
 ```
 
+#### Oracle 是可选驱动
+
+默认构建（约 25MB）带 PostgreSQL / MySQL / SQL Server / SQLite / Redis。Oracle
+的纯 Go 驱动（go-ora）一项就要 ~13MB——绝大多数用户不会为它买单，所以它是
+构建可选项：
+
+```powershell
+go install github.com/tc-hib/go-winres@latest   # （release 脚本用）exe 资源
+go build -tags oracle -o dbstudio-go-oracle.exe # ~38MB，带 Oracle
+```
+
+带 `-tags oracle` 构建时连接表单出现 Oracle 选项；默认构建里一个已保存的
+Oracle 连接会得到一句怎么把它带回来的明确提示，而不是内核的 "unknown kind"。
+
 The release build stamps the version into the binary (`-X main.version`),
 which the Help ▸ About box shows.
 

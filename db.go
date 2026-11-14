@@ -14,7 +14,6 @@ import (
 	"github.com/dbcore/dbcore"
 	_ "github.com/dbcore/dbcore/mssql"    // registers the SQL Server factory
 	_ "github.com/dbcore/dbcore/mysql"    // registers the MySQL factory
-	_ "github.com/dbcore/dbcore/oracle"   // registers the Oracle factory
 	_ "github.com/dbcore/dbcore/postgres" // registers the PostgreSQL factory
 	_ "github.com/dbcore/dbcore/redis"    // registers the Redis factory
 	_ "github.com/dbcore/dbcore/sqlite"   // registers the SQLite factory
@@ -87,6 +86,14 @@ func OpenDB(ctx context.Context, c Conn) (*DB, error) {
 	}
 	if tun != nil {
 		spec.Dialer = tun.Dialer()
+	}
+	// 波 100 体积整改：Oracle 是 opt-in。默认构建里一个已保存的 Oracle 连接
+	// 不该收到内核的"unknown kind"，而是一句"怎么把它带回来"。
+	if !oracleEnabled && c.Kind == "oracle" {
+		if tun != nil {
+			_ = tun.Close()
+		}
+		return nil, fmt.Errorf("%s", oracleUnavailableNote)
 	}
 	d, err := dbcore.Open(ctx, spec, dbcore.PoolConfig{MaxOpen: 8, MaxIdle: 4})
 	if err != nil {
