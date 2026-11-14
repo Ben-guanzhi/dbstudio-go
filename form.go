@@ -54,7 +54,7 @@ func (app *App) formView(c *ui.Context) {
 						ui.TextInput(c, &app.form.Name)
 					})
 					ui.Field(c, "Kind", func() {
-						ui.Select(c, &app.form.Kind, kinds)
+						ui.Select(c, &app.form.Kind, kindsAvailable())
 					})
 					ui.Field(c, "Colour", func() {
 						// The picker holds a label; the connection holds the

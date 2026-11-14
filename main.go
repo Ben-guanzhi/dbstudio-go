@@ -47,6 +47,9 @@ func main() {
 		}
 		store.loadHistory()
 		app.store = store
+		// 波 100 续：发现 exe 旁的驱动插件（dbstudio-plugin-<kind>.exe），
+		// 注册进内核工厂表——连接表单的 Kind 下拉据此动态出现对应引擎。
+		DiscoverPlugins(store.Dir())
 		// Usability metrics (S-01): a no-op unless POLYDB_USABILITY=1. The file
 		// lives next to the connection store so a user can read/delete it; it is
 		// never uploaded.

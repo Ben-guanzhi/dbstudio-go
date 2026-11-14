@@ -16,6 +16,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -348,8 +349,14 @@ func (s *Store) Active() (Conn, bool) {
 	return Conn{}, false
 }
 
-// names lists the known engine kinds, in display order.
-var kinds = []string{"sqlite", "mysql"}
+// kindsAvailable lists the known engine kinds, in display order: the built-in
+// drivers plus whatever plugin executables discovery registered (波 100 续：
+// 随 Discover/Undiscover 即时变化，表单每次打开都读新值).
+func kindsAvailable() []string {
+	out := append([]string{"sqlite", "mysql"}, PluginKinds()...)
+	sort.Strings(out[2:])
+	return out
+}
 
 func defaultPort(kind string) int {
 	switch kind {

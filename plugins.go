@@ -7,10 +7,12 @@ package main
 // process it starts IS the connection (the kernel's one-process-one-connection
 // arrangement; the spec rides argv[1] as JSON).
 //
-// The discovery contract is the executable's name, which is why the form's
-// Kind list can offer every engine at startup without launching anything:
-// `dbstudio-plugin-postgres.exe` means the postgres kind is available.
-// Duplicate names resolve first-wins, matching the dedup everywhere else.
+// 波 100 续（时空可组合性）：发现与撤回对称——UndiscoverPlugins 把注册表带
+// 回「此前没有该插件」的状态（注销 kind、不杀进程：每个进程是一条连接，归
+// 连接池管，这里没有进程句柄可杀）。撤回受内核的 reliance 守卫保护：
+// FactoryReliance > 0（有连接正在打开）时 UnregisterFactory 拒绝，调用方得
+// 到错误而不是一个被抽走的工厂——dbcore 文档里明写的 relied_n(γ) 类比。
+// 二次发现同 kind 跳过（HasFactory 前置），内置驱动永不遮蔽，热重扫幂等。
 
 import (
 	"context"
@@ -34,13 +36,21 @@ const pluginPrefix = "dbstudio-plugin-"
 // launched into a failed handshake.
 var pluginExts = map[string]bool{".exe": true}
 
+// discovered remembers which kinds this process registered from which file,
+// so UndiscoverPlugins withdraws exactly what a previous scan installed — the
+// accumulator discipline: one discover's inverse withdraws its own contribution.
+var discovered = map[string]pluginEntry{}
+
+type pluginEntry struct {
+	exe  string
+	path string
+}
+
 // DiscoverPlugins registers every plugin executable in dir into dbcore's
 // factory table. A missing directory is silent: the built-in MySQL keeps
-// working regardless, and a fresh install has no plugins yet.
-//
-// The factory is lazy on the inside: dbcore.Open calls it per connection, and
-// the factory starts the plugin process with the spec on argv — the process
-// dies with the driver's Close, which the pool already drives.
+// working regardless, and a fresh install has no plugins yet. Re-scanning is
+// idempotent — a kind already registered (built-in or previously discovered)
+// is skipped, never double-registered.
 func DiscoverPlugins(dir string) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -58,18 +68,41 @@ func DiscoverPlugins(dir string) {
 		if !strings.HasPrefix(base, pluginPrefix) {
 			continue
 		}
-		kind := strings.TrimPrefix(base, pluginPrefix)
+		kind := strings.ToLower(strings.TrimPrefix(base, pluginPrefix))
 		if kind == "" || seen[kind] {
 			continue
 		}
 		kind = strings.ToLower(kind)
 		exe := filepath.Join(dir, e.Name())
 		if dbcore.HasFactory(dbcore.DatabaseKind(kind)) {
-			continue // a built-in driver wins; a plugin never shadows it
+			continue // a built-in driver or an earlier scan wins; never shadow
 		}
 		seen[kind] = true
 		dbcore.RegisterFactory(dbcore.DatabaseKind(kind), pluginFactory(exe))
+		discovered[kind] = pluginEntry{exe: exe, path: dir}
 	}
+}
+
+// UndiscoverPlugins withdraws every plugin this process registered from dir
+// (every discovered plugin when dir is empty), returning the registry to the
+// state before that scan. Withdrawal is refused per kind while a connection of
+// that kind is still opening (dbcore's reliance guard); the return value is
+// how many kinds were actually withdrawn, and failed kinds are reported so a
+// caller can surface them instead of losing the attempt silently.
+func UndiscoverPlugins(dir string) (withdrawn int, busy []string) {
+	for kind, entry := range discovered {
+		if dir != "" && entry.path != dir {
+			continue
+		}
+		if err := dbcore.UnregisterFactory(dbcore.DatabaseKind(kind)); err != nil {
+			busy = append(busy, fmt.Sprintf("%s: %v", kind, err))
+			continue
+		}
+		delete(discovered, kind)
+		withdrawn++
+	}
+	sort.Strings(busy)
+	return withdrawn, busy
 }
 
 // pluginFactory returns the dbcore.Factory that serves kind from one plugin
@@ -101,29 +134,13 @@ func pluginFactory(exe string) dbcore.Factory {
 }
 
 // PluginKinds lists the engine kinds the plugins beside the app serve, sorted.
-// The connection form's Kind list is the built-ins plus these.
+// The connection form's Kind list is the built-ins plus these. It reads the
+// live discovery state (not the directory), so a rescan that withdrew a plugin
+// is reflected without a restart.
 func PluginKinds() []string {
-	dir, err := os.Executable()
-	if err != nil {
-		return nil
-	}
-	entries, err := os.ReadDir(filepath.Dir(dir))
-	if err != nil {
-		return nil
-	}
-	var out []string
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
-		}
-		base := strings.TrimSuffix(e.Name(), filepath.Ext(e.Name()))
-		if !strings.HasPrefix(base, pluginPrefix) {
-			continue
-		}
-		kind := strings.ToLower(strings.TrimPrefix(base, pluginPrefix))
-		if kind != "" && !dbcore.HasFactory(dbcore.DatabaseKind(kind)) {
-			out = append(out, kind)
-		}
+	out := make([]string, 0, len(discovered))
+	for kind := range discovered {
+		out = append(out, kind)
 	}
 	sort.Strings(out)
 	return out
