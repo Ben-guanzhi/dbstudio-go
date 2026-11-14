@@ -34,7 +34,18 @@ SQL editor and its result grid on the right, one status line underneath.
 
 ## Engines
 
-PostgreSQL · MySQL · SQL Server · Oracle · SQLite · Redis (KV) · DM
+**Built in**: MySQL · SQLite (zero-config local engine)
+
+**As plugins** — drop the executable beside the app, the connection form picks
+it up; each connection runs its own plugin process:
+
+| Plugin | Download |
+|---|---|
+| `dbstudio-plugin-postgres` | the repo's Releases page |
+| more engines | build from `cmd/dbstudio-plugin-<kind>` — the SDK (`internal/pluginsdk`) is ~300 lines to implement |
+
+A connection whose kind has no built-in driver and no plugin beside the
+executable reports exactly that, with the naming convention to fix it.
 
 ## Build
 

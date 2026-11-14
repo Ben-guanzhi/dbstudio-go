@@ -12,11 +12,11 @@ import (
 	"time"
 
 	"github.com/dbcore/dbcore"
-	_ "github.com/dbcore/dbcore/mssql"    // registers the SQL Server factory
-	_ "github.com/dbcore/dbcore/mysql"    // registers the MySQL factory
-	_ "github.com/dbcore/dbcore/postgres" // registers the PostgreSQL factory
-	_ "github.com/dbcore/dbcore/redis"    // registers the Redis factory
-	_ "github.com/dbcore/dbcore/sqlite"   // registers the SQLite factory
+	// 波 100 插件化：内置驱动只有 MySQL（主推）与 SQLite（零配置本地引擎，
+	// 自测与 demo 用）；其余引擎来自 app 目录里的 dbstudio-plugin-<kind>
+	// 可执行（plugins.go 发现并注册进同一张工厂表，OpenDB 无感）。
+	_ "github.com/dbcore/dbcore/mysql"
+	_ "github.com/dbcore/dbcore/sqlite"
 
 	"dbstudio-go/internal/tunnel"
 )
@@ -87,13 +87,15 @@ func OpenDB(ctx context.Context, c Conn) (*DB, error) {
 	if tun != nil {
 		spec.Dialer = tun.Dialer()
 	}
-	// 波 100 体积整改：Oracle 是 opt-in。默认构建里一个已保存的 Oracle 连接
-	// 不该收到内核的"unknown kind"，而是一句"怎么把它带回来"。
-	if !oracleEnabled && c.Kind == "oracle" {
+	// 波 100 插件化：连接的 kind 没有内置驱动时，指向 app 目录的插件约定
+	// ——比内核的 "unknown kind" 多说一句怎么把它带回来。
+	if !dbcore.HasFactory(dbcore.DatabaseKind(c.Kind)) {
 		if tun != nil {
 			_ = tun.Close()
 		}
-		return nil, fmt.Errorf("%s", oracleUnavailableNote)
+		return nil, fmt.Errorf(
+			"%s has no built-in driver — put dbstudio-plugin-%s(.exe) beside the executable to add it (see the releases page)",
+			c.Kind, c.Kind)
 	}
 	d, err := dbcore.Open(ctx, spec, dbcore.PoolConfig{MaxOpen: 8, MaxIdle: 4})
 	if err != nil {
