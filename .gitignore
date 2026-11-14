@@ -1,0 +1,20 @@
+# Build output
+/dbstudio.exe
+
+# Local SQLite demo database (regenerate with: go run ./cmd/demodb)
+/demo.db
+
+# User data: real connections, SQL history, the OS keyring and the window
+# layout are the user's own, never the repository's (波 100 发布整改).
+/connections.json
+/connections.history.json
+/keyring.bin
+/session.json
+/usability.ndjson
+
+# Build output
+/build/
+/dist/
+/.gopath/
+/.gocache/
+/.gotmp/
