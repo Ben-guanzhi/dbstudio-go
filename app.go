@@ -240,6 +240,7 @@ type App struct {
 	formTestOK  bool
 	formErr     string
 	modal       bool
+	aboutOpen   bool
 
 	splitSide   float32
 	splitEditor float32

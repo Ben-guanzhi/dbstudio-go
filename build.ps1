@@ -256,9 +256,11 @@ function Step-Release {
         $name = "$AppName-$Version-$os-amd64$ext"
         $out = Join-Path $DistDir $name
         # -trimpath drops this machine's paths; -s -w strip symbols; production=1
-        # turns mygo's dev mode off.
+        # turns mygo's dev mode off; -X main.version stamps the release (the
+        # About box shows it, an unversioned build says "dev").
+        $ldflags = "$ProdLdflags -X main.version=$Version"
         Step-Build -OutFile $out -Goos $os -Goarch 'amd64' `
-            -ExtraArgs (@('-trimpath') + $ProdTags + @('-ldflags', $ProdLdflags))
+            -ExtraArgs (@('-trimpath') + $ProdTags + @('-ldflags', $ldflags))
         $size = [math]::Round((Get-Item $out).Length / 1MB, 1)
         $hash = (Get-FileHash -Algorithm SHA256 -Path $out).Hash.ToLowerInvariant()
         "$hash  $name" | Set-Content -Path ($out + '.sha256') -Encoding ascii -NoNewline
