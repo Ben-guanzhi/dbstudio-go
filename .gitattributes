@@ -1,0 +1,21 @@
+# Line endings are LF everywhere, on every platform.
+#
+# Go's gofmt refuses CRLF and rewrites files on sight, so a `core.autocrlf=true`
+# checkout (the Windows default, which is also what the windows-latest runner
+# uses) made `gofmt -l .` list the entire tree — a CI failure that says nothing
+# about the code. Declaring the normalisation here makes a clone identical in
+# content on every machine, which is what `-trimpath` and reproducible builds
+# assume anyway.
+* text=auto eol=lf
+
+# Never normalise binaries.
+*.png binary
+*.ico binary
+*.syso binary
+*.db binary
+*.exe binary
+
+# PowerShell scripts keep CRLF: Windows PowerShell 5.1 mis-parses a
+# line-continuation backtick at the end of an LF-only line in some hosts, and
+# these scripts only ever run on Windows.
+*.ps1 text eol=crlf

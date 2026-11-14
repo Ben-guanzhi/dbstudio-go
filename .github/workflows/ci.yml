@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+    tags: ["v*"]
+  pull_request:
+
+# Windows-only on purpose: the UI stack (mygo) renders through Direct3D 11 and
+# imports d3d11/dxgi at init, so there is no Linux job to add. CGO is off
+# everywhere (mygo forbids it), which is also what keeps the release binary a
+# single file.
+#
+# The tree resolves the shared kernel through a local replace in go.mod
+# (`replace github.com/dbcore/dbcore => ../dbcore`), so the sibling clone below
+# is required — without it every build step fails with
+# "replacement directory ../dbcore does not exist". Same stopgap as sqltui's
+# workflow; the permanent fix is renaming dbcore's module path.
+
+jobs:
+  go:
+    name: Go (fmt / vet / build / test)
+    runs-on: windows-latest
+    env:
+      CGO_ENABLED: "0"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: check out dbcore (sibling, for the local replace)
+        shell: bash
+        env:
+          # Unset unless a PAT exists: the workflow token is scoped to this repo
+          # and cannot read another one.
+          DBCORE_TOKEN: ${{ secrets.DBCORE_CHECKOUT_TOKEN }}
+        run: |
+          set -eu
+          dest="$(dirname "$GITHUB_WORKSPACE")/dbcore"
+          if [ -n "${DBCORE_TOKEN:-}" ]; then
+            hdr="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$DBCORE_TOKEN" | base64 -w0)"
+            git -c "http.extraheader=$hdr" clone --depth 1 https://github.com/Ben-guanzhi/dbcore.git "$dest"
+          else
+            git clone --depth 1 https://github.com/Ben-guanzhi/dbcore.git "$dest"
+          fi
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: gofmt
+        shell: bash
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "gofmt needed for: $unformatted"
+            exit 1
+          fi
+
+      - name: vet
+        run: go vet ./...
+
+      - name: build
+        run: go build ./...
+
+      - name: build the postgres plugin
+        # The plugin is a separate main package: `go build ./...` compiles it as
+        # part of the module but never proves it links as a standalone binary.
+        # The output path also feeds plugins_test.go, which copies the binary
+        # under a fake kind to exercise discovery.
+        shell: bash
+        run: |
+          mkdir -p build
+          go build -trimpath -o build/dbstudio-plugin-postgres.exe ./cmd/dbstudio-plugin-postgres
+
+      - name: test
+        # The UI tests render through ui.NewTester (CPU-side, no window), so the
+        # headless runner is enough; nothing here needs a desktop session.
+        shell: bash
+        run: |
+          set +e
+          out=$(go test -count=1 ./... 2>&1)
+          rc=$?
+          echo "$out"
+          if [ "$rc" -ne 0 ]; then
+            detail=$(printf '%s' "$out" | grep -E '^(--- FAIL|FAIL|    )' | head -40 | tr '\n' ' ' | head -c 1500)
+            echo "::error title=go test rc=$rc::[$detail]"
+          fi
+          exit "$rc"
+
+      - name: package portable zip
+        # A tagged build ships the app plus the postgres plugin beside it — the
+        # discovery contract is "the executable sits next to the app", so the zip
+        # must preserve that layout. Untagged pushes still produce the artifact,
+        # with the version reading "dev".
+        shell: bash
+        run: |
+          set -eu
+          version="${GITHUB_REF_NAME#v}"
+          if [ "${GITHUB_REF_TYPE:-}" != "tag" ]; then version="dev"; fi
+          mkdir -p dist
+          go build -trimpath -tags mygo_noinspector \
+            -ldflags "-s -w -X main.version=$version" \
+            -o dist/dbstudio-go.exe .
+          go build -trimpath -ldflags "-s -w" \
+            -o dist/dbstudio-plugin-postgres.exe ./cmd/dbstudio-plugin-postgres
+          ls -l dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dbstudio-go-windows-amd64
+          path: dist/
+          if-no-files-found: error
