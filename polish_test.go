@@ -157,6 +157,11 @@ func TestSessionRoundTrip(t *testing.T) {
 	saved.Width, saved.Height = 1200, 700
 	writeSession(t, path, saved)
 
+	// 波 100：钳制依赖屏幕事实，测试没有 running app——注入一个假的。
+	origArea := workAreaOf
+	workAreaOf = func() (int, int) { return 0, 0 }
+	t.Cleanup(func() { workAreaOf = origArea })
+
 	got := loadSession(path)
 	if len(got.Consoles) != 2 {
 		t.Fatalf("consoles = %d, want 2", len(got.Consoles))
@@ -172,6 +177,32 @@ func TestSessionRoundTrip(t *testing.T) {
 	}
 	if w, h := windowSize(got); w != 1200 || h != 700 {
 		t.Fatalf("window = %dx%d, want 1200x700", w, h)
+	}
+}
+
+// 波 100：会话里的大于屏幕的窗口尺寸被钳到工作区里——换过显示器的会话
+// 不能把任务栏和半张桌面顶出屏幕。
+func TestWindowSizeClampsToWorkArea(t *testing.T) {
+	origArea := workAreaOf
+	t.Cleanup(func() { workAreaOf = origArea })
+
+	workAreaOf = func() (int, int) { return 1920, 1040 }
+	if w, h := windowSize(sessionState{Width: 2560, Height: 1400}); w != 1904 || h != 1024 {
+		t.Errorf("oversized session = %dx%d, want clamped 1904x1024", w, h)
+	}
+	// A session that fits passes through untouched.
+	if w, h := windowSize(sessionState{Width: 1200, Height: 700}); w != 1200 || h != 700 {
+		t.Errorf("fitting session = %dx%d, want 1200x700", w, h)
+	}
+	// A tiny work area clamps to the window's own minimum, never below it.
+	workAreaOf = func() (int, int) { return 800, 400 }
+	if w, h := windowSize(sessionState{Width: 2560, Height: 1400}); w != 860 || h != 520 {
+		t.Errorf("tiny work area = %dx%d, want minimum 860x520", w, h)
+	}
+	// No screen facts (a test, a headless run): the session or default stands.
+	workAreaOf = func() (int, int) { return 0, 0 }
+	if w, h := windowSize(sessionState{Width: 2560, Height: 1400}); w != 2560 || h != 1400 {
+		t.Errorf("no work area = %dx%d, want the session's own", w, h)
 	}
 }
 
@@ -212,6 +243,11 @@ func TestApplySession(t *testing.T) {
 
 // A missing or broken session is a fresh start, not an error.
 func TestSessionMissingOrBroken(t *testing.T) {
+	// 波 100：钳制依赖屏幕事实，测试没有 running app——注入"无屏幕"。
+	origArea := workAreaOf
+	workAreaOf = func() (int, int) { return 0, 0 }
+	t.Cleanup(func() { workAreaOf = origArea })
+
 	dir := t.TempDir()
 	if got := loadSession(filepath.Join(dir, "nope.json")); len(got.Consoles) != 0 {
 		t.Fatal("a missing session produced a state")

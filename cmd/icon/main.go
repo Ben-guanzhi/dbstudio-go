@@ -1,12 +1,13 @@
-// The icon generator: draws DB Studio's product icon as PNGs (256/64/48/32/16)
-// plus the multi-size .ico Windows executables embed. 波 100.
+// The icon generator: draws DB Studio's product icon as PNGs (16..256) plus
+// the multi-size .ico Windows executables embed. 波 100.
 //
-// The mark: a rounded-square tile in the brand blue, a white data grid of
-// three rows and three columns with one cell selected, and a green "run"
-// triangle sitting in the selection — the whole product in one glyph: a grid
-// of rows, a query, the run. Drawn with Go's image package, no assets.
+// The mark, in the DBeaver/TablePlus family (gradient tile + one bold database
+// glyph): a vertically shaded blue rounded tile, the classic database
+// cylinder — a stack of discs — in white, and a green "run" triangle on the
+// cylinder's face. One glyph says database, one says query. Drawn with Go's
+// image package, no assets.
 //
-//	go run ./cmd/icon            # writes resources/icon-*.png + resources/icon.ico
+//	go run ./cmd/icon            # writes resources/icon*.png + resources/icon.ico
 package main
 
 import (
@@ -19,19 +20,16 @@ import (
 	"path/filepath"
 )
 
-// brand is the accent the app already paints: mygo light theme's accent blue.
-var brand = color.RGBA{R: 0x25, G: 0x63, B: 0xeb, A: 0xff}
-var brandDeep = color.RGBA{R: 0x1d, G: 0x4e, B: 0xd8, A: 0xff}
+// brand is the tile's top hue; it shades toward brandDeep at the bottom — the
+// gradient every modern database client's icon wears (TablePlus's teal,
+// DBeaver's blue, Navicat's green: all one hue, light to dark).
+var brand = color.RGBA{R: 0x3b, G: 0x82, B: 0xf6, A: 0xff}     // blue-500
+var brandDeep = color.RGBA{R: 0x1e, G: 0x3a, B: 0x8a, A: 0xff} // indigo-900
 var ink = color.RGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}
-var cellSoft = color.RGBA{R: 0xff, G: 0xff, B: 0xff, A: 0x38}
-var runGreen = color.RGBA{R: 0x22, G: 0xc5, B: 0x5e, A: 0xff}
+var inkSoft = color.RGBA{R: 0x1e, G: 0x3a, B: 0x8a, A: 0x66} // a shade of the tile, for seams
+var runGreen = color.RGBA{R: 0x4a, G: 0xde, B: 0x80, A: 0xff}
 
 func main() {
-	out, err := os.MkdirTemp("", "dbstudio-icon-*")
-	if err != nil {
-		panic(err)
-	}
-	_ = out
 	sizes := []int{16, 24, 32, 48, 64, 128, 256}
 	icons := map[int][]byte{}
 	for _, s := range sizes {
@@ -41,8 +39,8 @@ func main() {
 		}
 		icons[s] = buf.Bytes()
 	}
-	// The resources dir: icon.png (1024-class master, here 256 for repo weight)
-	// for docs and stores, the small ones for the window, the .ico for the exe.
+	// The resources dir: icon.png (the master, for docs and stores), the small
+	// ones for the window/taskbar, the .ico for the exe.
 	if err := os.MkdirAll("resources", 0o755); err != nil {
 		panic(err)
 	}
@@ -66,41 +64,122 @@ func drawIcon(s int) *image.RGBA {
 	img := image.NewRGBA(image.Rect(0, 0, s, s))
 	u := float32(s) / 256 // one design unit at 256
 
-	// The rounded tile: the app tile, brand blue with a subtle vertical shade.
-	radius := 52 * u
-	roundRect(img, 0, 0, s, s, radius, brand)
-	// Top-light: a soft highlight band gives the tile its depth without a
-	// second asset.
-	roundRectShade(img, 0, 0, float32(s), float32(s)/2, radius, color.RGBA{R: 0xff, G: 0xff, B: 0xff, A: 0x16})
-	// The grid: three columns × three rows of white cells, the right column
-	// fainter (the data goes on), and margins that keep the tile's edge calm.
-	gx, gy := 52*u, 56*u
-	cw, ch := 44*u, 30*u
-	gapX, gapY := 10*u, 10*u
-	for row := 0; row < 3; row++ {
-		for col := 0; col < 3; col++ {
-			x := gx + float32(col)*(cw+gapX)
-			y := gy + float32(row)*(ch+gapY)
-			c := ink
-			if col == 2 {
-				c = cellSoft
-			}
-			roundRect(img, int(x), int(y), int(x+cw), int(y+ch), 7*u, c)
-		}
+	// The tile: vertical gradient from brand to brandDeep, rounded corners.
+	radius := 56 * u
+	gradientRoundRect(img, 0, 0, s, s, radius, brand, brandDeep)
+
+	// The database cylinder: ellipse cap, straight sides, rounded bottom, and
+	// two seams dividing the body into discs — the database glyph everyone
+	// knows. White on the shaded tile.
+	cx := float32(s) / 2
+	topY := 54 * u
+	rx := 72 * u // cylinder's horizontal radius
+	ry := 24 * u // ellipse's vertical radius
+	h := 116 * u // body height
+	cylinder(img, cx, topY, rx, ry, h, ink)
+
+	// Two seams divide the body into thirds; they curve with the rim.
+	bodyBottom := topY + ry + h - ry
+	for i := 1; i <= 2; i++ {
+		seamY := topY + ry + (h-ry)*float32(i)/3
+		drawSeam(img, cx, seamY, rx-10*u, (ry-6*u)*0.9, inkSoft)
 	}
 
-	// The run triangle in the middle cell: the query, ready. Green pops on
-	// both the light and the dark desktop, and reads at 16px.
-	cx := gx + cw + gapX
-	cy := gy + ch + gapY
-	pad := 6 * u
+	// The run triangle on the cylinder's face, right of center: the query,
+	// ready to go. Green reads on the blue at every size.
+	cx0, cy0 := cx+8*u, topY+ry+30*u
 	tri := []image.Point{
-		{int(cx + pad), int(cy + pad)},
-		{int(cx + pad), int(cy + ch - pad)},
-		{int(cx + cw - pad), int(cy + ch/2)},
+		{int(cx0), int(cy0)},
+		{int(cx0), int(cy0 + 36*u)},
+		{int(cx0 + 30*u), int(cy0 + 18*u)},
 	}
 	fillPoly(img, tri, runGreen)
+	_ = bodyBottom
 	return img
+}
+
+// cylinder draws a white database: top ellipse, straight sides, bottom curve.
+func cylinder(img *image.RGBA, cx, topY, rx, ry, h float32, c color.RGBA) {
+	bottomY := topY + h
+	bounds := img.Bounds()
+	for py := bounds.Min.Y; py < bounds.Max.Y; py++ {
+		for px := bounds.Min.X; px < bounds.Max.X; px++ {
+			fx, fy := float32(px)+0.5, float32(py)+0.5
+			in := false
+			if fy >= topY-ry && fy <= topY+ry {
+				// The top ellipse.
+				dy := (fy - topY) / ry
+				dx := (fx - cx) / rx
+				if dx*dx+dy*dy <= 1 {
+					in = true
+				}
+			}
+			if !in && fy > topY && fy < bottomY+ry {
+				// The body: inside the horizontal band, closed by the bottom
+				// curve below it.
+				if fx >= cx-rx && fx <= cx+rx {
+					if fy <= bottomY {
+						in = true
+					} else {
+						dy := (fy - bottomY) / ry
+						dx := (fx - cx) / rx
+						if dx*dx+dy*dy <= 1 {
+							in = true
+						}
+					}
+				}
+			}
+			if in {
+				blendPixel(img, px, py, c, 1)
+			}
+		}
+	}
+}
+
+// drawSeam strokes a thin elliptical band (the cylinder's seam), its lower
+// half only — the seam curves down like the rim does.
+func drawSeam(img *image.RGBA, cx, cy, rx, ry float32, c color.RGBA) {
+	bounds := img.Bounds()
+	for py := bounds.Min.Y; py < bounds.Max.Y; py++ {
+		for px := bounds.Min.X; px < bounds.Max.X; px++ {
+			fx, fy := float32(px)+0.5, float32(py)+0.5
+			dx := (fx - cx) / rx
+			dy := (fy - cy) / ry
+			d := dx*dx + dy*dy
+			if d <= 1.10 && d >= 0.72 && fy >= cy {
+				blendPixel(img, px, py, c, 1)
+			}
+		}
+	}
+}
+
+// gradientRoundRect fills an antialiased rounded rectangle that shades from
+// top (c0) to bottom (c1).
+func gradientRoundRect(img *image.RGBA, x0, y0, x1, y1 int, r float32, c0, c1 color.RGBA) {
+	bounds := img.Bounds()
+	h := float32(y1 - y0)
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			if x < x0 || x >= x1 || y < y0 || y >= y1 {
+				continue
+			}
+			a := coverage(x, y, float32(x0), float32(y0), float32(x1), float32(y1), r)
+			if a <= 0 {
+				continue
+			}
+			t := (float32(y) - float32(y0)) / h
+			blendPixel(img, x, y, mix(c0, c1, t), a)
+		}
+	}
+}
+
+func mix(a, b color.RGBA, t float32) color.RGBA {
+	return color.RGBA{
+		R: uint8(float32(a.R) + (float32(b.R)-float32(a.R))*t),
+		G: uint8(float32(a.G) + (float32(b.G)-float32(a.G))*t),
+		B: uint8(float32(a.B) + (float32(b.B)-float32(a.B))*t),
+		A: uint8(float32(a.A) + (float32(b.A)-float32(a.A))*t),
+	}
 }
 
 // roundRect fills an antialiased rounded rectangle via a coverage test per
@@ -113,23 +192,6 @@ func roundRect(img *image.RGBA, x0, y0, x1, y1 int, r float32, c color.RGBA) {
 				continue
 			}
 			a := coverage(x, y, float32(x0), float32(y0), float32(x1), float32(y1), r)
-			if a <= 0 {
-				continue
-			}
-			blendPixel(img, x, y, c, a)
-		}
-	}
-}
-
-// roundRectShade is roundRect over a region clipped to y1 (a band).
-func roundRectShade(img *image.RGBA, x0, y0 int, x1, y1, r float32, c color.RGBA) {
-	bounds := img.Bounds()
-	for y := bounds.Min.Y; y < bounds.Max.Y && float32(y) < y1; y++ {
-		for x := bounds.Min.X; x < bounds.Max.X; x++ {
-			if x < x0 || float32(x) >= x1 || y < y0 {
-				continue
-			}
-			a := coverage(x, y, float32(x0), float32(y0), x1, y1, r)
 			if a <= 0 {
 				continue
 			}
@@ -231,8 +293,7 @@ func writeICO(path string, icons map[int][]byte) error {
 		offset += uint32(len(b))
 	}
 	for _, s := range sizes {
-		b := icons[s]
-		buf.Write(b)
+		buf.Write(icons[s])
 	}
 	return os.WriteFile(path, buf.Bytes(), 0o644)
 }

@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui/editor"
 )
 
@@ -196,13 +197,43 @@ func clampInt(i, lo, hi int) int {
 	return i
 }
 
-// windowSize is the size a new window opens at: the session's, when it is big
-// enough to be usable, else the defaults.
+// workAreaOf is the screen-facts source windowSize clamps against, split out so
+// a test can hand a display in without a running app (mygo's Screen calls wait
+// for the main loop, which a test has none of).
+var workAreaOf = func() (int, int) {
+	if d := mygo.Screen.DisplayNearestPoint(mygo.Screen.CursorScreenPoint()); d.WorkArea.Width > 0 {
+		return d.WorkArea.Width, d.WorkArea.Height
+	}
+	return 0, 0
+}
+
+// windowSize is the size a new window opens at: the session's, clamped to the
+// screen the cursor is on. 波 100：一个换过显示器的会话（2×1440p 外接回到笔记本
+// 屏）原样恢复就是把任务栏和半张桌面顶出屏幕——尺寸是会话的建议，屏幕才是
+// 事实。调用时机在 WhenReady 内，Screen 已可用。
 func windowSize(s sessionState) (int, int) {
 	const defW, defH = 1320, 860
 	const minW, minH = 860, 520
-	if s.Width >= minW && s.Height >= minH {
-		return s.Width, s.Height
+	w, h := s.Width, s.Height
+	if w < minW || h < minH {
+		w, h = defW, defH
 	}
-	return defW, defH
+	if aw, ah := workAreaOf(); aw > 0 && ah > 0 {
+		// Keep a small margin so the window's frame and the taskbar both fit;
+		// the window is never larger than the work area.
+		maxW, maxH := aw-16, ah-16
+		if maxW < minW {
+			maxW = minW
+		}
+		if maxH < minH {
+			maxH = minH
+		}
+		if w > maxW {
+			w = maxW
+		}
+		if h > maxH {
+			h = maxH
+		}
+	}
+	return w, h
 }
