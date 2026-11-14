@@ -24,7 +24,7 @@ import (
 	"github.com/dbcore/dbcore"
 	"github.com/egoist/mygo/ui"
 
-	"dbstudio/internal/sqlcodec"
+	"dbstudio-go/internal/sqlcodec"
 )
 
 // schemaAll is the selector's label for "no schema chosen".

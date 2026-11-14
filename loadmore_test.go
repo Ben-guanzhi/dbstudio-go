@@ -273,7 +273,7 @@ func TestWindowColourAndTitle(t *testing.T) {
 	app.conn = Conn{Name: "prod", Kind: "mysql", Color: "red", ReadOnly: true}
 	app.connName = "prod"
 
-	if got := app.windowTitle(); got != "DB Studio — ■ prod 🔒" {
+	if got := app.windowTitle(); got != "DB Studio Go — ■ prod 🔒" {
 		t.Fatalf("title = %q", got)
 	}
 	// The band draws (the tester draws the view, which includes it).
@@ -281,12 +281,12 @@ func TestWindowColourAndTitle(t *testing.T) {
 
 	// A connection with no colour has no band but still names itself.
 	app.conn = Conn{Name: "local", Kind: "sqlite"}
-	if got := app.windowTitle(); got != "DB Studio — local" {
+	if got := app.windowTitle(); got != "DB Studio Go — local" {
 		t.Fatalf("title = %q", got)
 	}
 	// A closed window is the app alone.
 	app.open = false
-	if got := app.windowTitle(); got != "DB Studio" {
+	if got := app.windowTitle(); got != "DB Studio Go" {
 		t.Fatalf("title = %q", got)
 	}
 }

@@ -65,7 +65,7 @@ $AppDir = $PSScriptRoot
 $RepoDir = Split-Path -Parent $AppDir
 $BuildDir = Join-Path $AppDir 'build'
 $DistDir = Join-Path $AppDir 'dist'
-$AppName = 'dbstudio'
+$AppName = 'dbstudio-go'
 
 # --- environment -------------------------------------------------------------
 

@@ -8,7 +8,7 @@ package main
 // formatted in place, so one clause can be tidied without touching the rest.
 
 import (
-	"dbstudio/internal/sqlformat"
+	"dbstudio-go/internal/sqlformat"
 )
 
 // formatSQL reformats the editor's text: the current selection when one is made,

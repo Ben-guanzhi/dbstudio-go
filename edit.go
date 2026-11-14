@@ -23,7 +23,7 @@ import (
 
 	"github.com/dbcore/dbcore"
 
-	"dbstudio/internal/sqlcodec"
+	"dbstudio-go/internal/sqlcodec"
 )
 
 // rowState is what the working copy holds for one row.

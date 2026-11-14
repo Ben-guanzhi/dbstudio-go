@@ -1,4 +1,4 @@
-module dbstudio
+module dbstudio-go
 
 go 1.27.3
 

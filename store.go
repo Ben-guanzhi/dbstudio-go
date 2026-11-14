@@ -22,7 +22,7 @@ import (
 
 	"github.com/egoist/mygo"
 
-	"dbstudio/internal/keyring"
+	"dbstudio-go/internal/keyring"
 )
 
 // Conn is one saved connection. Only the fields meaningful for Kind are used.

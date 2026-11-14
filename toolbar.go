@@ -6,7 +6,7 @@ package main
 // 保持唯一的主按钮（PrimaryButton 的强调色指路），其余图标化省出宽度。
 
 import (
-	"dbstudio/internal/icons"
+	"dbstudio-go/internal/icons"
 	"github.com/egoist/mygo/ui"
 )
 

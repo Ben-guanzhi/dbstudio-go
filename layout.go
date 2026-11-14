@@ -62,7 +62,7 @@ func (app *App) colorBand(c *ui.Context) {
 // windowTitle is what the platform shows: the app, then the connection and its
 // lock, so a taskbar button names the server it is pointed at.
 func (app *App) windowTitle() string {
-	const base = "DB Studio"
+	const base = "DB Studio Go"
 	if !app.open || app.connName == "" {
 		return base
 	}

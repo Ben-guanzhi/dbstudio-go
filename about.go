@@ -27,8 +27,8 @@ func (app *App) aboutView(c *ui.Context) {
 		ui.Column(c).Gap(8).Padding(16).Width(420).
 			Background(t.Surface).Radius(10).Border(1, t.Border).
 			Children(func() {
-				ui.Text(c, "DB Studio").FontSize(16).Bold()
-				ui.Text(c, "A focused SQL query workbench.").
+				ui.Text(c, "DB Studio Go").FontSize(16).Bold()
+				ui.Text(c, "A focused SQL query workbench (dbstudio-go).").
 					TextColor(t.TextMuted).Wrap()
 				ui.Row(c).Gap(6).Children(func() {
 					ui.Text(c, "Version").TextColor(t.TextMuted).FontSize(11)

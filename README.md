@@ -1,4 +1,4 @@
-# DB Studio
+# DB Studio Go (dbstudio-go)
 
 ![DB Studio icon](resources/icon.png)
 

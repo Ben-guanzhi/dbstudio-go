@@ -95,7 +95,7 @@ func (app *App) setMenu() {
 		}},
 		{Role: mygo.RoleWindowMenu},
 		{Label: "Help", Submenu: []*mygo.MenuItem{
-			{Label: "About DB Studio",
+			{Label: "About DB Studio Go",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openAbout() }},
 			{Label: "Connection Info…", Accelerator: "CmdOrCtrl+I",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openConnInfo() }},

@@ -80,7 +80,7 @@ func main() {
 		app.initModalEditors()
 
 		app.win = mygo.NewWindow(mygo.WindowOptions{
-			Title:     "DB Studio",
+			Title:     "DB Studio Go",
 			Width:     width,
 			Height:    height,
 			MinWidth:  860,

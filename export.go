@@ -23,8 +23,8 @@ import (
 
 	"github.com/dbcore/dbcore"
 
-	"dbstudio/internal/sqlcodec"
-	"dbstudio/internal/xlsx"
+	"dbstudio-go/internal/sqlcodec"
+	"dbstudio-go/internal/xlsx"
 )
 
 // exportFormat names a file format the Export button writes.

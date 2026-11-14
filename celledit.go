@@ -17,7 +17,7 @@ import (
 	"github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/editor"
 
-	"dbstudio/internal/sqlcodec"
+	"dbstudio-go/internal/sqlcodec"
 )
 
 // openCell opens the value editor for one cell: the grid's row and column, so the

@@ -31,7 +31,7 @@ import (
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 
-	"dbstudio/internal/sqlcodec"
+	"dbstudio-go/internal/sqlcodec"
 )
 
 // copyKind is what a copy action produces.

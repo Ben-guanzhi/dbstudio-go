@@ -11,7 +11,7 @@
         },
         "info": {
           "0409": {
-            "ProductName": "DB Studio",
+            "ProductName": "DB Studio Go",
             "FileDescription": "A focused SQL query workbench",
             "LegalCopyright": "DB Studio contributors",
             "ProductVersion": "0.1.0",
@@ -24,7 +24,7 @@
   "RT_MANIFEST": {
     "#1": {
       "0409": {
-        "identity": { "name": "DB Studio", "version": "0.1.0" },
+        "identity": { "name": "DB Studio Go", "version": "0.1.0" },
         "description": "A focused SQL query workbench",
         "minimum-os": "win7",
         "execution-level": "asInvoker",

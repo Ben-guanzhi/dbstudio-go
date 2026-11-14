@@ -19,7 +19,7 @@ import (
 	_ "github.com/dbcore/dbcore/redis"    // registers the Redis factory
 	_ "github.com/dbcore/dbcore/sqlite"   // registers the SQLite factory
 
-	"dbstudio/internal/tunnel"
+	"dbstudio-go/internal/tunnel"
 )
 
 // DB is one live connection.
