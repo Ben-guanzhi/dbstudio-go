@@ -63,6 +63,7 @@ func (app *App) view(c *ui.Context) {
 	app.columnsView(c)
 	app.aboutView(c)
 	app.structureView(c)
+	app.pluginsView(c)
 
 	// 波 99：紧凑密度。默认主题 Spacing=4，表格一行吃掉 Space(8)=32px 的呼吸
 	// ——数据客户端要的是屏上多几行，不是多几像素的留白（DataGrip 的 comfort/

@@ -80,6 +80,8 @@ func (app *App) setMenu() {
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openHistory() }},
 			{Label: "Columns…",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openColumns() }},
+			{Label: "Plugins…",
+				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openPlugins() }},
 			mygo.Separator(),
 			{Label: "Copy Row as INSERT",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.copyAs(copyInsert) }},

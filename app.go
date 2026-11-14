@@ -252,6 +252,8 @@ type App struct {
 	formErr     string
 	modal       bool
 	aboutOpen   bool
+	plugOpen    bool
+	plugNote    string
 
 	splitSide   float32
 	splitEditor float32
