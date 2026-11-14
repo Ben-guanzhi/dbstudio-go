@@ -4,6 +4,10 @@
 
 A focused SQL query workbench — connect, browse, query, edit, export.
 
+> **命名说明**：GitHub 上同名的 `Ben-guanzhi/dbstudio` 是本项目的 Rust/GPUI
+> 前身，已于 2026-10-24 并入 polydb 冻结归档。Go 版以 **dbstudio-go** 发布，
+> 用户可见名 **DB Studio Go**。
+
 Built in Go on [mygo](https://github.com/egoist/mygo)'s native UI. The layout
 is the one DataGrip taught: connections and the schema tree on the left, the
 SQL editor and its result grid on the right, one status line underneath.
@@ -36,7 +40,7 @@ PostgreSQL · MySQL · SQL Server · Oracle · SQLite · Redis (KV) · DM
 
 ```powershell
 .\build.ps1 check            # gofmt + build + vet + test
-.\build.ps1                  # development binary at build\dbstudio.exe
+.\build.ps1                  # development binary at build\dbstudio-go.exe
 .\build.ps1 release          # stripped binaries in dist\ + sha256
 .\build.ps1 release -Target all -Version 0.1.0
 ```
