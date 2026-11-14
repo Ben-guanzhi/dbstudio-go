@@ -127,6 +127,11 @@ func (app *App) treeNodeMenu(m *ui.Menu, n treeNode) {
 		if m.Item("Browse Data").Chosen() {
 			app.browseTable(n)
 		}
+		if m.Item("Structure").Chosen() {
+			// 波 100：表结构查看——列/类型/键/默认/注释的表格（TablePlus 的
+			// Structure 页），与 View DDL 并列：一个是事实表，一个是语句。
+			app.openStructure(n)
+		}
 		if m.Item("View DDL").Chosen() {
 			app.openDDL(n)
 		}

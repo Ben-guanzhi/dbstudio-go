@@ -45,7 +45,7 @@ func (app *App) formView(c *ui.Context) {
 		app.hostDefaults()
 	}
 	ui.Modal(c, &app.modal, func() {
-		ui.Column(c).Gap(12).Padding(16).Width(440).
+		ui.Column(c).Gap(12).Padding(16).Width(520).
 			Background(t.Surface).Radius(10).Border(1, t.Border).
 			Children(func() {
 				ui.Text(c, "Connection").FontSize(15).Bold()
@@ -56,20 +56,20 @@ func (app *App) formView(c *ui.Context) {
 					ui.Field(c, "Kind", func() {
 						ui.Select(c, &app.form.Kind, kinds)
 					})
-					ui.Row(c).Gap(8).Children(func() {
-						ui.Field(c, "Colour", func() {
-							// The picker holds a label; the connection holds the
-							// key, so the palette can be relabelled without
-							// invalidating saved connections.
-							label := colorLabel(app.form.Color)
-							sel := ui.Select(c, &label, colorLabels())
-							if sel.Changed() {
-								app.form.Color = colorOfLabel(label)
-							}
-						})
-						ui.Field(c, "Read-only", func() {
-							ui.Checkbox(c, &app.form.ReadOnly, "refuse statements that write")
-						})
+					ui.Field(c, "Colour", func() {
+						// The picker holds a label; the connection holds the
+						// key, so the palette can be relabelled without
+						// invalidating saved connections.
+						label := colorLabel(app.form.Color)
+						sel := ui.Select(c, &label, colorLabels())
+						if sel.Changed() {
+							app.form.Color = colorOfLabel(label)
+						}
+					})
+					// 波 100：Read-only 独占一行——与 Colour 挤一行时说明文字
+					// 被弹窗右缘裁掉（截图），而这句话正是防误改的关键。
+					ui.Field(c, "Read-only", func() {
+						ui.Checkbox(c, &app.form.ReadOnly, "refuse statements that write")
 					})
 					if app.form.Kind == "sqlite" {
 						ui.Field(c, "File", func() {

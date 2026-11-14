@@ -133,6 +133,17 @@ type App struct {
 	ddlNode   treeNode
 	ddlGen    uint64
 
+	// The structure viewer's modal (波 100): the table's columns as a grid.
+	// stOpen is the modal, stCols the loaded columns, stGen the load guard —
+	// the same discard-the-older-load rule the DDL viewer applies.
+	stOpen  bool
+	stBusy  bool
+	stErr   string
+	stTable string
+	stCols  []dbcore.ColumnInfo
+	stGen   uint64
+	stGrid  ui.ListState
+
 	// The cell value editor's modal and its editor. cellRow and cellCol address
 	// the cell in the grid's full set; cellBytes and cellHex are its blob, if it
 	// holds one, and how that blob is shown.
