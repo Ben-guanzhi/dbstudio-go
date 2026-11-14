@@ -220,6 +220,7 @@ func TestKeyboardReachable(t *testing.T) {
 		t.Errorf("加速键数量异常（%d 个）——扫描可能失效", len(bound))
 	}
 }
+
 // TestNoColorOnlySignal：状态不得只靠颜色。连接标记已有文本伴随（connectionMark
 // 的 ■ 前缀 + 🔒 只读标记，readonly_test 已钉）；这里断言调色板每个 key 的
 // label 都非空（选择器读的是 label 而非颜色），并断言 mark 函数存在。

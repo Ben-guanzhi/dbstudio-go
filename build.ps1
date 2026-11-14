@@ -244,6 +244,21 @@ function Step-DevBuild {
 
 function Step-Release {
     if (-not $Version) { $Version = New-Version }
+    # The Windows exe's icon, version block and manifest come from a .syso
+    # beside main: regenerate it when go-winres is on PATH (install with
+    # `go install github.com/tc-hib/go-winres@latest`), keep the committed one
+    # otherwise — the artwork only changes when resources/ does. 波 100.
+    $winres = Get-Command 'go-winres' -ErrorAction SilentlyContinue
+    if ($winres -and (Test-Path (Join-Path $AppDir 'winres\winres.json'))) {
+        Write-Step 'windows resources (icon / version / manifest)'
+        Push-Location $AppDir
+        try {
+            & go-winres simply --arch amd64 --out rsrc 2>&1 | ForEach-Object { Write-Host "    $_" }
+        } finally {
+            Pop-Location
+        }
+        Write-Ok 'rsrc_windows_amd64.syso'
+    }
     $targets = switch ($Target) {
         'all' { @('windows', 'linux', 'darwin') }
         default { @($Target) }

@@ -121,7 +121,8 @@ func TestResultsEmptyState(t *testing.T) {
 }
 
 // The toolbar is actions only: no status line, no health dot (the status bar
-// owns both), and the groups are all reachable.
+// owns both), and the groups are all reachable. 波 100：图标按钮的可见文本为空，
+// 但 accessible name（Label）进 Texts()，断言照旧成立。
 func TestToolbarIsActionsOnly(t *testing.T) {
 	app := newViewApp(t, nil)
 	app.open = true

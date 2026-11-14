@@ -1,0 +1,35 @@
+{
+  "RT_GROUP_ICON": {
+    "APP": { "0000": ["icon.ico"] }
+  },
+  "RT_VERSION": {
+    "1": {
+      "0000": {
+        "fixed": {
+          "file_version": "0.1.0",
+          "product_version": "0.1.0"
+        },
+        "info": {
+          "0409": {
+            "ProductName": "DB Studio",
+            "FileDescription": "A focused SQL query workbench",
+            "LegalCopyright": "DB Studio contributors",
+            "ProductVersion": "0.1.0",
+            "FileVersion": "0.1.0"
+          }
+        }
+      }
+    }
+  },
+  "RT_MANIFEST": {
+    "#1": {
+      "0409": {
+        "identity": { "name": "DB Studio", "version": "0.1.0" },
+        "description": "A focused SQL query workbench",
+        "minimum-os": "win7",
+        "execution-level": "asInvoker",
+        "dpi-awareness": "per monitor v2"
+      }
+    }
+  }
+}

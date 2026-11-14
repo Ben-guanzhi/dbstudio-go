@@ -87,6 +87,11 @@ func main() {
 			MinHeight: 520,
 			Content:   ui.View(app.view),
 		})
+		// 波 100：窗口与任务栏的图标（Windows/Linux）。内嵌的 PNG 由
+		// cmd/icon 生成——rebuild 时改一处图形，三处生效（窗口、exe 资源、文档）。
+		if err := app.win.SetIcon(appIconPNG); err != nil {
+			log.Printf("window icon: %v", err)
+		}
 		app.setMenu()
 		// The session is written on quit, so a restart opens what was open. A
 		// quit from the menu and one from the window's close button both pass

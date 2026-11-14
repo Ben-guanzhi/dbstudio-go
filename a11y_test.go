@@ -93,11 +93,19 @@ func TestInteractiveControlsHaveAccessibleNames(t *testing.T) {
 		}
 		for i, line := range lines {
 			// 按钮：可见文本必须非空（字面量非空，或一个提供文本的标识符）。
+			// 图标按钮的例外：可见文本为空但同一行链了 .Label("非空")——可及
+			// 名字由 Label 给出（波 100 的工具条图标按钮），契约的精神是
+			// 「控件要有名字」，不是「控件要有可见字」。
 			if m := a11yButtonCall.FindStringSubmatch(line); m != nil {
 				arg := strings.TrimSpace(m[1])
 				switch {
 				case strings.HasPrefix(arg, `"`):
 					if strings.TrimSpace(strings.Trim(arg, `"`)) == "" {
+						if lm := a11yLabelChain.FindStringSubmatch(line); lm != nil &&
+							strings.TrimSpace(strings.Trim(lm[1], `"`)) != "" {
+							checked++
+							continue
+						}
 						t.Errorf("%s:%d 按钮的可见文本为空: %s", f, i+1, strings.TrimSpace(line))
 					}
 				case a11yIdent.MatchString(arg):

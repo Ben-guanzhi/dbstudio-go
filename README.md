@@ -1,5 +1,7 @@
 # DB Studio
 
+![DB Studio icon](resources/icon.png)
+
 A focused SQL query workbench — connect, browse, query, edit, export.
 
 Built in Go on [mygo](https://github.com/egoist/mygo)'s native UI. The layout
