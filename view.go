@@ -126,7 +126,9 @@ func (app *App) navigator(c *ui.Context) {
 	// virtualising scroll and the layout's Grow gives it a viewport taller than
 	// the room it has (WORKSPACE §73-§76: rows were laid out past the window).
 	// Capping the tree column keeps its rows inside the pane; the value leaves
-	// room for the header, connection list and schema selector above it.
+	// room for the header, connection list and schema selector above it, and
+	// for the state line at the bottom of the window, which the tree must not
+	// paint into (WORKSPACE §83).
 	_, canvasH := c.Size()
 	ui.Column(c).Fill().Background(t.Surface).Children(func() {
 		// 波 98：标题短一点（DataGrip 就叫 Navigator）——260px 的默认侧栏宽度
@@ -194,7 +196,7 @@ func (app *App) navigator(c *ui.Context) {
 					app.searchResults(c, t)
 				})
 			} else {
-				ui.Column(c).Grow(1).Gap(2).Padding(0, 6, 6, 6).MaxHeight(canvasH - 250).Children(func() {
+				ui.Column(c).Grow(1).Gap(2).Padding(0, 6, 6, 6).MaxHeight(canvasH - 262).Children(func() {
 					app.tree.List.Selected = &app.treeSel
 					ui.Outline(c, &app.tree, app.treeRoots(), app.treeChildren, func(n treeNode) {
 						app.treeRow(c, n)
