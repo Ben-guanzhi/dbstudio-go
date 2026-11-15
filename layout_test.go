@@ -111,13 +111,22 @@ func TestResultsMessagesTab(t *testing.T) {
 	}
 }
 
-// A result that has not run yet says how to make one.
+// A result that has not run yet says why it is empty and how to fill it: the
+// three gestures, each with its key. 波 101 续二十五.
 func TestResultsEmptyState(t *testing.T) {
 	app := newViewApp(t, nil)
 	app.tabs = nil
 	tt := ui.NewTester(app.resultsPane, 900, 400)
-	if !tt.HasText("No results yet — run a statement (Ctrl+Enter)") {
-		t.Fatalf("the results area has no empty state; texts = %v", tt.Texts())
+	for _, want := range []string{
+		"No results yet",
+		"Run a statement and its rows appear here.",
+		"Ctrl+Enter", "run",
+		"F5", "re-read",
+		"Ctrl+H", "history",
+	} {
+		if !tt.HasText(want) {
+			t.Fatalf("the results empty state is missing %q; texts = %v", want, tt.Texts())
+		}
 	}
 }
 

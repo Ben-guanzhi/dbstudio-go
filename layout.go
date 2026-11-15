@@ -44,6 +44,30 @@ func emptyState(c *ui.Context, t *ui.Theme, text string) {
 	ui.Text(c, text).TextColor(t.TextMuted).Padding(10).FontSize(11).SingleLine()
 }
 
+// resultsHint is the results pane with nothing in it. A blank region is an
+// invitation to guess; this names the reason and the three gestures that fill it
+// — run, re-read, and look at what ran before — each with the key that does it.
+// The bar and the grid replace it as soon as a statement returns.
+func (app *App) resultsHint(c *ui.Context, t *ui.Theme) {
+	ui.Column(c).Gap(6).Padding(12, 12).Children(func() {
+		ui.Text(c, "No results yet").FontSize(12).SingleLine()
+		ui.Text(c, "Run a statement and its rows appear here.").
+			FontSize(10).TextColor(t.TextMuted).SingleLine()
+		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+			hint := func(keys, what string) {
+				ui.Row(c).Gap(4).AlignItems(ui.Center).Children(func() {
+					ui.Text(c, keys).FontSize(10).TextColor(t.Text).
+						Padding(1, 4).BorderWidth(1).BorderColor(t.Border)
+					ui.Text(c, what).FontSize(10).TextColor(t.TextMuted).SingleLine()
+				})
+			}
+			hint("Ctrl+Enter", "run")
+			hint("F5", "re-read")
+			hint("Ctrl+H", "history")
+		})
+	})
+}
+
 // connCount is how many connections are saved: the navigator's onboarding state
 // depends on it (nothing saved is a different situation from nothing chosen).
 func (app *App) connCount() int {

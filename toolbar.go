@@ -23,6 +23,23 @@ func iconButton(c *ui.Context, g icons.Glyph, name, tip string, clicked func()) 
 	}
 }
 
+// labelledButton is the toolbar's normal shape: the glyph and the action's name
+// side by side. A glyph alone is a guess until the pointer rests on it; the name
+// is what makes the toolbar readable at a glance, and the glyph is what the eye
+// finds afterwards. The names are the accessible labels the buttons already had.
+func labelledButton(c *ui.Context, g icons.Glyph, name, tip string, clicked func()) {
+	t := c.Theme()
+	b := ui.Button(c, "").Label(name).Tooltip(tip).Children(func() {
+		ui.Row(c).Gap(4).AlignItems(ui.Center).Children(func() {
+			icons.Draw(c, g, ui.Color{})
+			ui.Text(c, name).FontSize(10).TextColor(t.Text).SingleLine()
+		})
+	})
+	if b.Clicked() {
+		clicked()
+	}
+}
+
 // toolbar is the action bar: it changes state and never reports it (the status
 // bar does that). The groups read left to right as the work goes: connect, run,
 // transact, look, then the working copy's own row actions.
@@ -34,15 +51,15 @@ func (app *App) toolbar(c *ui.Context) {
 			if ui.PrimaryButton(c, "Run").Tooltip("Run the script (Ctrl+Enter)").Clicked() {
 				app.commitOrRun()
 			}
-			iconButton(c, icons.RunSelection, "Run Selection", "Run only the selected text (Ctrl+Shift+Enter)", app.runSelection)
-			iconButton(c, icons.RunToCaret, "Run to Caret", "Run everything up to the caret as one script (Ctrl+Shift+R)", app.runToCaret)
+			labelledButton(c, icons.RunSelection, "Run Selection", "Run only the selected text (Ctrl+Shift+Enter)", app.runSelection)
+			labelledButton(c, icons.RunToCaret, "Run to Caret", "Run everything up to the caret as one script (Ctrl+Shift+R)", app.runToCaret)
 			if app.busy {
 				// Stop cancels the running statement's context, which the
 				// kernel's QueryContext honors: the driver interrupts it.
-				iconButton(c, icons.Stop, "Stop", "Cancel the running query", app.cancelRun)
+				labelledButton(c, icons.Stop, "Stop", "Cancel the running query", app.cancelRun)
 			}
 			ui.Divider(c)
-			iconButton(c, icons.Format, "Clear", "Empty the editor", func() { app.edBuf.Set("") })
+			labelledButton(c, icons.Format, "Clear", "Empty the editor", func() { app.edBuf.Set("") })
 			ui.Divider(c)
 			// The transaction group: the switch, the isolation the next
 			// transaction asks for, and the open transaction's two endings.
@@ -64,8 +81,8 @@ func (app *App) toolbar(c *ui.Context) {
 					}
 				}
 				if app.txActive {
-					iconButton(c, icons.Commit, "Commit Tx", "Commit the open transaction", app.commitTx)
-					iconButton(c, icons.Rollback, "Rollback Tx", "Roll back the open transaction", app.rollbackTx)
+					labelledButton(c, icons.Commit, "Commit Tx", "Commit the open transaction", app.commitTx)
+					labelledButton(c, icons.Rollback, "Rollback Tx", "Roll back the open transaction", app.rollbackTx)
 				}
 			}
 			if app.open {
@@ -73,30 +90,30 @@ func (app *App) toolbar(c *ui.Context) {
 			}
 			ui.Divider(c)
 			// The tools group: what looks at a result rather than producing one.
-			iconButton(c, icons.Refresh, "Refresh", "Re-read the result set (F5)", func() {
+			labelledButton(c, icons.Refresh, "Refresh", "Re-read the result set (F5)", func() {
 				if !app.busy && app.result != nil {
 					app.refreshCurrent(c)
 				}
 			})
-			iconButton(c, icons.Export, "Export", "Export the result (CSV / JSON / Excel / INSERT)", func() {
+			labelledButton(c, icons.Export, "Export", "Export the result (CSV / JSON / Excel / INSERT)", func() {
 				if app.result != nil {
 					app.exportResult(exportCSV)
 				}
 			})
-			iconButton(c, icons.Columns, "Columns", "Hide, show and reorder the result's columns", func() {
+			labelledButton(c, icons.Columns, "Columns", "Hide, show and reorder the result's columns", func() {
 				if app.result != nil {
 					app.openColumns()
 				}
 			})
-			iconButton(c, icons.History, "History", "Statements that ran (Ctrl+H)", app.openHistory)
-			iconButton(c, icons.NewConnection, "New Connection", "Open the connection form (Ctrl+N)", app.openForm)
+			labelledButton(c, icons.History, "History", "Statements that ran (Ctrl+H)", app.openHistory)
+			labelledButton(c, icons.NewConnection, "New Connection", "Open the connection form (Ctrl+N)", app.openForm)
 			// The working copy's row actions appear only while the grid is one
 			// table's rows.
 			if app.edit.active {
 				ui.Divider(c)
-				iconButton(c, icons.InsertRow, "Insert Row", "Insert a row", app.insertRow)
+				labelledButton(c, icons.InsertRow, "Insert Row", "Insert a row", app.insertRow)
 				rowOK := app.gridSel >= 0 && app.pageStart()+app.gridSel < len(app.edit.rows)
-				iconButton(c, icons.DeleteRow, "Delete Row", "Delete the selected row", func() {
+				labelledButton(c, icons.DeleteRow, "Delete Row", "Delete the selected row", func() {
 					if rowOK {
 						app.deleteRow()
 					}

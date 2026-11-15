@@ -271,7 +271,7 @@ func (app *App) resultsPane(c *ui.Context) {
 		if app.resultErr() != "" {
 			ui.Text(c, app.resultErr()).TextColor(t.Danger).Padding(8).Wrap()
 		} else if res == nil {
-			emptyState(c, t, "No results yet — run a statement (Ctrl+Enter)")
+			app.resultsHint(c, t)
 		} else {
 			app.filterBar(c, t)
 			if app.result != nil {
