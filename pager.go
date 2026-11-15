@@ -16,11 +16,15 @@ package main
 // cuts at most pageSize rows out of what was loaded.
 
 import (
+	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
+
+	"github.com/Ben-guanzhi/dbcore"
 )
 
 // resultPager is the state of the results grid's pager.
@@ -419,6 +423,14 @@ func (app *App) pagerBar(c *ui.Context) {
 			Tooltip("Last page").Clicked() {
 			app.pagerLast()
 		}
+		// 波 101 续十一：精确计数按需。浏览打开时不再跑 COUNT(*)，所以这里平时是
+		// 未知态；点一下才去数，数完把真实总数交给 pager（页数随之变成确定的）。
+		if app.pager.total < 0 && app.db != nil && app.db.SQL != nil {
+			if ui.Button(c, "Σ").FontSize(10).Disabled(locked).
+				Tooltip("Count the rows exactly (the estimate above costs nothing)").Clicked() {
+				app.pagerCountExact()
+			}
+		}
 		// A table too large to count still says how large it is: the catalog's
 		// estimate, when the pager has no total to show.
 		if app.pager.total < 0 {
@@ -434,6 +446,49 @@ func (app *App) pagerBar(c *ui.Context) {
 			app.setPageSize(app.pageSizeLabel)
 		}
 	})
+}
+
+// pagerCountExact asks the server for the exact row count the pager is showing as
+// unknown. It is the on-demand half of the interactive-analytics rule: browsing
+// never pays a COUNT(*), and a reader who wants the precise figure pays for one
+// query, once.
+func (app *App) pagerCountExact() {
+	if app.db == nil || app.db.SQL == nil {
+		return
+	}
+	tab := app.tab()
+	if tab == nil || tab.kind != tabBrowse {
+		return
+	}
+	schema, table := tab.schema, tab.table
+	if table == "" {
+		return
+	}
+	db := app.db
+	req := &dbcore.TableRowsRequest{
+		Page:     1,
+		PageSize: app.pager.pageSize,
+		Sort:     sortKeys(tab.sortBy),
+		Filter:   tab.filter,
+	}
+	app.beginBusy("count")
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		n, err := db.SQL.BrowseRowsCount(ctx, schema, table, req)
+		app.post(func() {
+			app.endBusy("count")
+			if err != nil {
+				app.errMsg = "Count failed: " + err.Error()
+				app.status = "Count failed"
+				return
+			}
+			app.pager.total = int(n)
+			// A known total makes the estimate redundant.
+			app.putEstimate(estimateKey(schema, table), rowEstimate{rows: int64(n), known: true})
+			app.status = "Counted " + itoa(int(n)) + " rows"
+		})
+	}()
 }
 
 // incrementalBar is the browse's pager: how much of the table is loaded, and a

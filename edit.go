@@ -17,6 +17,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"regexp"
 	"strings"
 	"time"
@@ -294,6 +295,16 @@ func (app *App) commit() {
 		app.post(func() {
 			app.endBusy("edit")
 			if err != nil {
+				// A row the kernel could not match is not a statement failure:
+				// someone else edited or deleted it after this grid read it. Say
+				// so, and keep the working copy so the user can compare and
+				// re-apply instead of retyping the edits.
+				if errors.Is(err, dbcore.ErrRowConflict) {
+					app.errMsg = "Not committed: " + err.Error() +
+						" — reload the rows to see the current values, then re-apply your edits"
+					app.status = "Row changed by someone else"
+					return
+				}
 				app.errMsg = "Commit failed: " + err.Error()
 				app.status = "Commit failed"
 				return
@@ -329,7 +340,15 @@ func (e *editState) request() (dbcore.BatchRequest, string) {
 			if len(ch) == 0 {
 				continue
 			}
-			req.Updates = append(req.Updates, dbcore.RowChange{PK: pk, Changes: ch})
+			req.Updates = append(req.Updates, dbcore.RowChange{
+				PK:      pk,
+				Changes: ch,
+				// What the row held when it was read: the kernel puts these into
+				// the UPDATE's WHERE, so a row another writer edited between the
+				// read and this commit stops matching instead of being silently
+				// overwritten (the lost-update window, Red Book ch13).
+				Expect: e.expectOf(r, ch),
+			})
 		}
 	}
 	return req, ""
@@ -353,6 +372,28 @@ func (e *editState) pkOf(r *editRow) map[string]dbcore.Value {
 		return nil
 	}
 	return pk
+}
+
+// expectOf is what the row's changed columns held when it was read, which is
+// the optimistic guard for the UPDATE. A cell that read as NULL is guarded with
+// IS NULL (the kernel renders it that way), not with the empty string its text
+// form shows: on a nullable column those are different values.
+func (e *editState) expectOf(r *editRow, changed map[string]dbcore.Value) map[string]dbcore.Value {
+	exp := make(map[string]dbcore.Value, len(changed))
+	for d, c := range e.cols {
+		if _, isChanged := changed[c.Name]; !isChanged {
+			continue
+		}
+		if d < len(r.origNull) && r.origNull[d] {
+			exp[c.Name] = dbcore.Value{Kind: dbcore.ValNull}
+			continue
+		}
+		if d >= len(r.origStrs) {
+			continue
+		}
+		exp[c.Name] = parseCell(r.kinds[d], r.origStrs[d])
+	}
+	return exp
 }
 
 // changesOf is the columns of a row whose text differs from what was read.

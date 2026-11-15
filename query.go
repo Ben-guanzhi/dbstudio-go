@@ -724,6 +724,9 @@ func (app *App) fetchBrowse(n treeNode) {
 			// which the database applies so both hold across pages.
 			Sort:   sortKeys(t.sortBy),
 			Filter: t.filter,
+			// 交互式表格不该为每一页付一次全表 COUNT(*)：pager 已有"未知总数"
+			// 与目录估算两种呈现，精确值由 Σ 按钮按需取（见 pagerCountExact）。
+			NoCount: true,
 		})
 		app.post(func() {
 			app.endBusy("browse")
