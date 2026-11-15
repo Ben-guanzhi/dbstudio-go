@@ -270,7 +270,7 @@ type App struct {
 // wants the rest of the window.
 const (
 	defaultSplitSide   float32 = 260
-	defaultSplitEditor float32 = 220
+	defaultSplitEditor float32 = 150
 )
 
 // initModalEditors builds the two editors the modals show, which are separate
