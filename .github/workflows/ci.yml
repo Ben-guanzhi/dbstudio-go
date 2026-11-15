@@ -11,11 +11,6 @@ on:
 # everywhere (mygo forbids it), which is also what keeps the release binary a
 # single file.
 #
-# The tree resolves the shared kernel through a local replace in go.mod
-# (`replace github.com/dbcore/dbcore => ../dbcore`), so the sibling clone below
-# is required — without it every build step fails with
-# "replacement directory ../dbcore does not exist". Same stopgap as sqltui's
-# workflow; the permanent fix is renaming dbcore's module path.
 
 jobs:
   go:
@@ -27,22 +22,6 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-
-      - name: check out dbcore (sibling, for the local replace)
-        shell: bash
-        env:
-          # Unset unless a PAT exists: the workflow token is scoped to this repo
-          # and cannot read another one.
-          DBCORE_TOKEN: ${{ secrets.DBCORE_CHECKOUT_TOKEN }}
-        run: |
-          set -eu
-          dest="$(dirname "$GITHUB_WORKSPACE")/dbcore"
-          if [ -n "${DBCORE_TOKEN:-}" ]; then
-            hdr="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$DBCORE_TOKEN" | base64 -w0)"
-            git -c "http.extraheader=$hdr" clone --depth 1 https://github.com/Ben-guanzhi/dbcore.git "$dest"
-          else
-            git clone --depth 1 https://github.com/Ben-guanzhi/dbcore.git "$dest"
-          fi
 
       - uses: actions/setup-go@v6
         with:
