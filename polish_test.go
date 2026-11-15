@@ -187,8 +187,10 @@ func TestWindowSizeClampsToWorkArea(t *testing.T) {
 	t.Cleanup(func() { workAreaOf = origArea })
 
 	workAreaOf = func() (int, int) { return 1920, 1040 }
-	if w, h := windowSize(sessionState{Width: 2560, Height: 1400}); w != 1904 || h != 1024 {
-		t.Errorf("oversized session = %dx%d, want clamped 1904x1024", w, h)
+	// The size asked for is the content's; the frame adds the chrome (29 wide,
+	// 69 tall: borders, caption, menu bar), so the content gets what is left.
+	if w, h := windowSize(sessionState{Width: 2560, Height: 1400}); w != 1875 || h != 955 {
+		t.Errorf("oversized session = %dx%d, want clamped 1875x955", w, h)
 	}
 	// A session that fits passes through untouched.
 	if w, h := windowSize(sessionState{Width: 1200, Height: 700}); w != 1200 || h != 700 {
@@ -260,7 +262,7 @@ func TestSessionMissingOrBroken(t *testing.T) {
 		t.Fatal("a broken session produced a state")
 	}
 	// The window's fallback size is used when the session has none.
-	if w, h := windowSize(sessionState{}); w != 1320 || h != 860 {
+	if w, h := windowSize(sessionState{}); w != 1320 || h != 800 {
 		t.Fatalf("default window = %dx%d", w, h)
 	}
 	// A session too small for the window minimum is ignored.

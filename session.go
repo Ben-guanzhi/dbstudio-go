@@ -212,8 +212,14 @@ var workAreaOf = func() (int, int) {
 // 屏）原样恢复就是把任务栏和半张桌面顶出屏幕——尺寸是会话的建议，屏幕才是
 // 事实。调用时机在 WhenReady 内，Screen 已可用。
 func windowSize(s sessionState) (int, int) {
-	const defW, defH = 1320, 860
+	const defW, defH = 1320, 800
 	const minW, minH = 860, 520
+	// The chrome the platform adds around the content: borders, the caption and
+	// the menu bar. The size the app asks for is the content's, so the room left
+	// for it is the work area minus this.
+	// Measured: a 1320x800 content area is a 1349x869 window — the borders, the
+	// caption and the menu bar add 29 wide and 69 tall.
+	const chromeW, chromeH = 29, 69
 	w, h := s.Width, s.Height
 	if w < minW || h < minH {
 		w, h = defW, defH
@@ -221,7 +227,7 @@ func windowSize(s sessionState) (int, int) {
 	if aw, ah := workAreaOf(); aw > 0 && ah > 0 {
 		// Keep a small margin so the window's frame and the taskbar both fit;
 		// the window is never larger than the work area.
-		maxW, maxH := aw-16, ah-16
+		maxW, maxH := aw-16-chromeW, ah-16-chromeH
 		if maxW < minW {
 			maxW = minW
 		}

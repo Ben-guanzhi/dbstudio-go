@@ -51,15 +51,15 @@ func (app *App) toolbar(c *ui.Context) {
 			if ui.PrimaryButton(c, "Run").Tooltip("Run the script (Ctrl+Enter)").Clicked() {
 				app.commitOrRun()
 			}
-			labelledButton(c, icons.RunSelection, "Run Selection", "Run only the selected text (Ctrl+Shift+Enter)", app.runSelection)
-			labelledButton(c, icons.RunToCaret, "Run to Caret", "Run everything up to the caret as one script (Ctrl+Shift+R)", app.runToCaret)
+			iconButton(c, icons.RunSelection, "Run Selection", "Run only the selected text (Ctrl+Shift+Enter)", app.runSelection)
+			iconButton(c, icons.RunToCaret, "Run to Caret", "Run everything up to the caret as one script (Ctrl+Shift+R)", app.runToCaret)
 			if app.busy {
 				// Stop cancels the running statement's context, which the
 				// kernel's QueryContext honors: the driver interrupts it.
 				labelledButton(c, icons.Stop, "Stop", "Cancel the running query", app.cancelRun)
 			}
 			ui.Divider(c)
-			labelledButton(c, icons.Format, "Clear", "Empty the editor", func() { app.edBuf.Set("") })
+			iconButton(c, icons.Format, "Clear", "Empty the editor", func() { app.edBuf.Set("") })
 			ui.Divider(c)
 			// The transaction group: the switch, the isolation the next
 			// transaction asks for, and the open transaction's two endings.
