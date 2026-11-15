@@ -218,6 +218,11 @@ type App struct {
 	shortcutsOpen bool
 	menuItems     []*mygo.MenuItem
 
+	// erOpen is the ER diagram: the schema's tables as boxes with their foreign
+	// keys between them, laid out by erModel.layoutER.
+	erOpen  bool
+	erModel *erModel
+
 	treeGen uint64
 	// The connection's metadata cache, behind the catalog selectors. The fields
 	// stay here (embedded struct, promoted), so a test building an App by hand

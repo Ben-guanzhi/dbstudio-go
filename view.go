@@ -60,6 +60,7 @@ func (app *App) view(c *ui.Context) {
 	app.connInfoView(c)
 	app.historyView(c)
 	app.shortcutsView(c)
+	app.erView(c)
 	app.confirmView(c)
 	app.columnsView(c)
 	app.aboutView(c)
