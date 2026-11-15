@@ -198,7 +198,7 @@ func (app *App) navigator(c *ui.Context) {
 					app.tree.List.Selected = &app.treeSel
 					ui.Outline(c, &app.tree, app.treeRoots(), app.treeChildren, func(n treeNode) {
 						app.treeRow(c, n)
-					}).Grow(1)
+					}).Grow(1).KeepScrollbars(true)
 					if app.treeSel >= 0 && app.treeSel < app.tree.Rows() {
 						app.treeSelect(app.tree.Item(app.treeSel))
 					}
