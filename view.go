@@ -81,9 +81,15 @@ func (app *App) view(c *ui.Context) {
 		// colour is seen before any text is read.
 		app.colorBand(c)
 		app.toolbar(c)
-		// Grow, not Fill: the split has siblings above and below it, and Fill
-		// means "as large as the parent", which pushed the status bar out of the
-		// window. Grow takes the room the toolbar and the status bar leave.
+		// The window-wide state line: connection, schema, engine, transaction,
+		// row count, elapsed, message. DBeaver and DataGrip put it under
+		// everything, but this canvas is laid out at the outer frame size, so the
+		// bottom of the window falls outside the client area (WORKSPACE §69/§70).
+		// Moving it directly under the toolbar keeps the same content in a place
+		// the layout definitely paints.
+		app.statusBar(c)
+		// Grow, not Fill: the split has siblings above it, and Fill means "as
+		// large as the parent", which would overlap them.
 		ui.Split(c, &app.splitSide, func() {
 			app.navigator(c)
 		}, func() {
@@ -93,10 +99,6 @@ func (app *App) view(c *ui.Context) {
 				app.resultsPane(c)
 			}).Grow(1)
 		}).Grow(1).SplitReset(260)
-		// The window-wide state line, under everything: the arrangement DBeaver
-		// and DataGrip both use, and the only place that reports rather than
-		// changes.
-		app.statusBar(c)
 	})
 	// The grid's header may have ordered the rows differently in this frame, and
 	// its filter bar may have changed the rows they are kept by; the pane is

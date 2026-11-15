@@ -20,8 +20,9 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-// TestStatusBarWithinWindow draws the whole app at several window sizes: a bar
-// pushed out of the window is the one defect the screenshot review kept finding.
+// TestStatusBarWithinWindow draws the whole app at several window sizes. The bar
+// sits under the toolbar, so it must be laid out near the top and never pushed
+// out at any size — the defect the screenshot review kept finding.
 func TestStatusBarWithinWindow(t *testing.T) {
 	for _, size := range []struct{ w, h int }{{1320, 800}, {1304, 763}, {1200, 700}, {1024, 600}, {900, 500}} {
 		app := newViewApp(t, nil)
@@ -31,8 +32,12 @@ func TestStatusBarWithinWindow(t *testing.T) {
 		if !ok {
 			t.Fatalf("%dx%d: the status bar's text is not laid out; texts = %v", size.w, size.h, tt.Texts())
 		}
-		if bottom := r.Y + r.H; bottom > float32(size.h) {
-			t.Errorf("%dx%d: the status bar is outside the window (bottom %.0f > %d)", size.w, size.h, bottom, size.h)
+		// Under the toolbar: above the halves, whatever the window is.
+		if r.Y > float32(size.h)/2 {
+			t.Errorf("%dx%d: the status bar sits at y=%.0f, not under the toolbar", size.w, size.h, r.Y)
+		}
+		if r.Y+r.H > float32(size.h) {
+			t.Errorf("%dx%d: the status bar is outside the window (bottom %.0f > %d)", size.w, size.h, r.Y+r.H, size.h)
 		}
 	}
 }
@@ -59,7 +64,7 @@ func connectedApp(t *testing.T, rows int) *App {
 }
 
 // TestTreeDoesNotPushStatusBarOut is the case the screenshots showed: a connected
-// session with a long schema. The bar must keep its place under everything.
+// session with a long schema. The tree must not move the bar, wherever it sits.
 func TestTreeDoesNotPushStatusBarOut(t *testing.T) {
 	for _, rows := range []int{200} {
 		app := connectedApp(t, rows)

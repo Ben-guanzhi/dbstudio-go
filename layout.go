@@ -104,14 +104,21 @@ func (app *App) refreshTitle() {
 	}
 }
 
-// statusBar is the bottom bar: the one place that reports state — the
-// connection's health and identity, the working schema, the transaction, the
-// rows and time of the last run, and the last message. It reads; it never
-// changes anything but the two probes the dot offers.
+// statusBar is the window-wide state line: the one place that reports state —
+// the connection's health and identity, the working schema, the transaction, the
+// rows and time of the last run, and the last message. It reads; it never changes
+// anything but the two probes the dot offers.
+//
+// It sits directly under the toolbar rather than under everything: this canvas is
+// laid out at the window's outer frame, so the bottom of the window is outside the
+// client area and a bar there is never seen (WORKSPACE §69/§70). On top it is a
+// context strip — surface background, both hairlines — and keeps every field it
+// had at the bottom.
 func (app *App) statusBar(c *ui.Context) {
 	t := c.Theme()
-	ui.Row(c).Gap(8).Padding(3, 8).AlignItems(ui.Center).
-		BorderWidth(1, 0, 0, 0).BorderColor(t.Border).Children(func() {
+	ui.Row(c).Gap(8).Padding(2, 8).AlignItems(ui.Center).
+		Background(t.Surface).
+		BorderWidth(1, 0, 1, 0).BorderColor(t.Border).Children(func() {
 		// The health dot, first: a red dot is the one thing worth seeing before
 		// reading anything else.
 		if app.open {
@@ -182,9 +189,12 @@ func (app *App) statusBar(c *ui.Context) {
 		if app.busy {
 			ui.Spinner(c)
 		}
-		ui.Spacer(c)
 		// The message: short, on one line; the Messages tab has the whole of it.
+		// It follows the fields rather than being pushed to the right edge: that
+		// edge is as unreliable as the bottom one in this build, and a message
+		// clipped to "My…" reports nothing.
 		if msg := app.statusMessage(); msg != "" {
+			ui.Text(c, "│").TextColor(t.Border).FontSize(10)
 			ui.Text(c, msg).FontSize(10).TextColor(t.TextMuted).SingleLine()
 		}
 	})
