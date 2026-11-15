@@ -44,6 +44,30 @@ func emptyState(c *ui.Context, t *ui.Theme, text string) {
 	ui.Text(c, text).TextColor(t.TextMuted).Padding(10).FontSize(11).SingleLine()
 }
 
+// connCount is how many connections are saved: the navigator's onboarding state
+// depends on it (nothing saved is a different situation from nothing chosen).
+func (app *App) connCount() int {
+	if app.store == nil {
+		return 0
+	}
+	return len(app.store.List())
+}
+
+// noConnections is the first-run block: a title, the primary action and one line
+// saying what happens next. It replaces a sentence that pointed at a control the
+// user could not see.
+func (app *App) noConnections(c *ui.Context, t *ui.Theme) {
+	ui.Column(c).Gap(8).Padding(10).Children(func() {
+		ui.Text(c, "No connections yet").FontSize(12).SingleLine()
+		ui.Text(c, "Add one to browse its schemas:").FontSize(10).TextColor(t.TextMuted).Wrap()
+		if ui.PrimaryButton(c, "New Connection…").Clicked() {
+			app.openForm()
+		}
+		ui.Text(c, "MySQL · SQLite built in; other engines via a plugin").
+			FontSize(10).TextColor(t.TextMuted).Wrap()
+	})
+}
+
 // colorBand is the connection's colour as a strip across the top of the window,
 // and the window's title carries the connection's name and lock. A title cannot
 // be coloured by the platform, so the band is what makes the colour part of the

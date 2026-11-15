@@ -64,8 +64,9 @@ func TestNavigatorHeaderAndEmptyState(t *testing.T) {
 	if !tt.HasText("Navigator") {
 		t.Fatalf("the navigator has no title; texts = %v", tt.Texts())
 	}
-	if !tt.HasText("Not connected — pick a connection above") {
-		t.Fatalf("the navigator has no empty state; texts = %v", tt.Texts())
+	// 首次打开（没有已保存连接）：给引导，而不是一句指不到任何东西的提示。
+	if !tt.HasText("No connections yet") || !tt.HasText("New Connection…") {
+		t.Fatalf("the navigator has no onboarding state; texts = %v", tt.Texts())
 	}
 }
 

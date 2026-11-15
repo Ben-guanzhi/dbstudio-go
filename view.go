@@ -163,6 +163,13 @@ func (app *App) navigator(c *ui.Context) {
 		// Where the window is looking, then how to find something in it.
 		ui.Column(c).Gap(4).Padding(6).Children(func() {
 			if !app.open {
+				// 首次打开：没有已保存连接时，一句"pick a connection above"
+				// 指不到任何东西——DBeaver/TablePlus/Beekeeper 都在这个位置放
+				// 主操作。有连接但没选时才用那句提示。
+				if app.connCount() == 0 {
+					app.noConnections(c, t)
+					return
+				}
 				emptyState(c, t, "Not connected — pick a connection above")
 				return
 			}
