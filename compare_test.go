@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dbcore/dbcore/schemadiff"
+	"github.com/Ben-guanzhi/dbcore/schemadiff"
 	"github.com/egoist/mygo/ui"
 )
 

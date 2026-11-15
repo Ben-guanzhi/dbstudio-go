@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/dbcore/dbcore"
+	"github.com/Ben-guanzhi/dbcore"
 )
 
 // chartPoints / chartNumericCol 的契约测试（Q-05 平移）：与 fynequery 的

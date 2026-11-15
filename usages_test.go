@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dbcore/dbcore"
+	"github.com/Ben-guanzhi/dbcore"
 )
 
 // usagesApp opens the seeded SQLite file with a referencing table, and gives

@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dbcore/dbcore"
+	"github.com/Ben-guanzhi/dbcore"
 )
 
 // executeStatement runs one statement with optional bind arguments. With

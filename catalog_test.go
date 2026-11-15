@@ -7,7 +7,7 @@ package main
 import (
 	"testing"
 
-	"github.com/dbcore/dbcore"
+	"github.com/Ben-guanzhi/dbcore"
 )
 
 func TestCatalogTablesStates(t *testing.T) {

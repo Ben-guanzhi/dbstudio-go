@@ -18,9 +18,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dbcore/dbcore"
-	"github.com/dbcore/dbcore/ddl"
-	"github.com/dbcore/dbcore/sqltext"
+	"github.com/Ben-guanzhi/dbcore"
+	"github.com/Ben-guanzhi/dbcore/ddl"
+	"github.com/Ben-guanzhi/dbcore/sqltext"
 	"github.com/egoist/mygo/ui"
 )
 

@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dbcore/dbcore"
+	"github.com/Ben-guanzhi/dbcore"
 )
 
 // usageRow is one row of a find-usages result: the referencing table and its

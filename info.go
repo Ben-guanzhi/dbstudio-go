@@ -19,7 +19,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/dbcore/dbcore"
+	"github.com/Ben-guanzhi/dbcore"
 	"github.com/egoist/mygo/ui"
 )
 

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dbcore/dbcore"
+	"github.com/Ben-guanzhi/dbcore"
 	"github.com/egoist/mygo/ui/editor"
 )
 

@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dbcore/dbcore"
+	"github.com/Ben-guanzhi/dbcore"
 )
 
 // multiFakeDriver is a driver whose ExecuteMulti answers with whatever sets the

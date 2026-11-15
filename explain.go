@@ -13,7 +13,7 @@ package main
 import (
 	"strings"
 
-	"github.com/dbcore/dbcore/sqltext"
+	"github.com/Ben-guanzhi/dbcore/sqltext"
 )
 
 // explainStatement returns the editor's SQL to explain: the selection when one

@@ -16,8 +16,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/dbcore/dbcore"
-	"github.com/dbcore/dbcore/postgres"
+	"github.com/Ben-guanzhi/dbcore"
+	"github.com/Ben-guanzhi/dbcore/postgres"
 
 	"dbstudio-go/internal/pluginsdk"
 )

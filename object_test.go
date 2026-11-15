@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dbcore/dbcore"
+	"github.com/Ben-guanzhi/dbcore"
 )
 
 // objApp opens a SQLite file with a second table referencing employees, an

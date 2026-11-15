@@ -11,7 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/dbcore/dbcore/sqlite"
+	"github.com/Ben-guanzhi/dbcore/sqlite"
 )
 
 func main() {

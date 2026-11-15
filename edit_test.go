@@ -9,7 +9,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/dbcore/dbcore"
+	"github.com/Ben-guanzhi/dbcore"
 )
 
 func TestTextCell(t *testing.T) {

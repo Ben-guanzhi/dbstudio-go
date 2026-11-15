@@ -27,7 +27,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/dbcore/dbcore"
+	"github.com/Ben-guanzhi/dbcore"
 )
 
 // rowsLoadedMax bounds how much of a table the incremental browse holds.

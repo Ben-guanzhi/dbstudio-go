@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dbcore/dbcore"
+	"github.com/Ben-guanzhi/dbcore"
 )
 
 // brokenApp is a connected App whose database is closed: every catalog read

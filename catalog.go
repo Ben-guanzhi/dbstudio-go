@@ -21,7 +21,7 @@ package main
 import (
 	"strings"
 
-	"github.com/dbcore/dbcore"
+	"github.com/Ben-guanzhi/dbcore"
 )
 
 // catalog is the metadata cache of the open connection.

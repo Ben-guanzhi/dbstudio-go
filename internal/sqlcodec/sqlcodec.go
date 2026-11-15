@@ -18,8 +18,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dbcore/dbcore"
-	"github.com/dbcore/dbcore/sqltext"
+	"github.com/Ben-guanzhi/dbcore"
+	"github.com/Ben-guanzhi/dbcore/sqltext"
 )
 
 // Literal renders a value as the literal of its own kind in the dialect dbType.

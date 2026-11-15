@@ -4,7 +4,7 @@ package main
 // columns at the left.
 
 import (
-	"github.com/dbcore/dbcore"
+	"github.com/Ben-guanzhi/dbcore"
 	"path/filepath"
 	"strings"
 	"testing"

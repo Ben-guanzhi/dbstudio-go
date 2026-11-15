@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dbcore/dbcore"
+	"github.com/Ben-guanzhi/dbcore"
 
 	"dbstudio-go/internal/sqlcodec"
 )

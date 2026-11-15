@@ -18,7 +18,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dbcore/dbcore"
+	"github.com/Ben-guanzhi/dbcore"
 )
 
 // pluginBody is a minimal valid plugin: banner naming the kind, then serving

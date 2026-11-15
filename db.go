@@ -11,12 +11,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dbcore/dbcore"
+	"github.com/Ben-guanzhi/dbcore"
 	// 波 100 插件化：内置驱动只有 MySQL（主推）与 SQLite（零配置本地引擎，
 	// 自测与 demo 用）；其余引擎来自 app 目录里的 dbstudio-plugin-<kind>
 	// 可执行（plugins.go 发现并注册进同一张工厂表，OpenDB 无感）。
-	_ "github.com/dbcore/dbcore/mysql"
-	_ "github.com/dbcore/dbcore/sqlite"
+	_ "github.com/Ben-guanzhi/dbcore/mysql"
+	_ "github.com/Ben-guanzhi/dbcore/sqlite"
 
 	"dbstudio-go/internal/tunnel"
 )

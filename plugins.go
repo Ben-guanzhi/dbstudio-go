@@ -23,8 +23,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/dbcore/dbcore"
-	"github.com/dbcore/dbcore/plugindriver"
+	"github.com/Ben-guanzhi/dbcore"
+	"github.com/Ben-guanzhi/dbcore/plugindriver"
 )
 
 // pluginPrefix names a DB Studio driver plugin. The rest of the file name is

@@ -18,7 +18,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/dbcore/dbcore"
+	"github.com/Ben-guanzhi/dbcore"
 )
 
 // rowEstimate is a cached estimate for one table: the rows, and whether the

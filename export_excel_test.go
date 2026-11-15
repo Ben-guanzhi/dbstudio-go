@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dbcore/dbcore"
+	"github.com/Ben-guanzhi/dbcore"
 )
 
 // sheetOf unzips a workbook and returns its sheet XML.
