@@ -553,7 +553,11 @@ func (app *App) renderTable(c *ui.Context, t *ui.Theme) {
 	// the widget reports its change; without this the order the click asked for
 	// would not reach applySort until a later frame.
 	table.Changed()
-	table.Grow(1)
+	// The grid keeps its scrollbars (WORKSPACE §82): a result's columns run
+	// past the pane's right edge on purpose — the table scrolls to them — and
+	// without the bar there is no way to reach them. The tree has the same
+	// rule for the same reason.
+	table.Grow(1).KeepScrollbars(true)
 	// A header drag reordered the grid: keep that as the tab's order.
 	if tab != nil && !slicesEqual(app.grid.Columns.Order, orderBefore) {
 		tab.colOrder = append([]string(nil), app.grid.Columns.Order...)
