@@ -72,7 +72,7 @@ func TestSidebarRendersHistory(t *testing.T) {
 
 	// The modal is on screen: its header, the navigator behind it, and each
 	// statement's first line are all text nodes the screen reader would see.
-	for _, want := range []string{"History", "Navigator", "SELECT * FROM employees", "DELETE FROM logs"} {
+	for _, want := range []string{"History", "Objects", "SELECT * FROM employees", "DELETE FROM logs"} {
 		if !tt.HasText(want) {
 			t.Errorf("the view does not show %q; texts = %v", want, tt.Texts())
 		}

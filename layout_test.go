@@ -61,8 +61,16 @@ func TestStatusBarShowsTransaction(t *testing.T) {
 func TestNavigatorHeaderAndEmptyState(t *testing.T) {
 	app := newViewApp(t, nil)
 	tt := ui.NewTester(app.navigator, 320, 600)
-	if !tt.HasText("Navigator") {
+	// 面板标题从 Navigator 改成 Objects：260px 的侧栏要同时放标题和四个动作，
+	// 只有短标题能让两者都不被截断（§73）。
+	if !tt.HasText("Objects") {
 		t.Fatalf("the navigator has no title; texts = %v", tt.Texts())
+	}
+	// 动作带文字：New / Refresh 是词，Edit / Delete 是字形（空间不够时先让字形）。
+	for _, want := range []string{"New", "Refresh"} {
+		if !tt.HasText(want) {
+			t.Fatalf("the navigator header is missing the %q action; texts = %v", want, tt.Texts())
+		}
 	}
 	// 首次打开（没有已保存连接）：给引导，而不是一句指不到任何东西的提示。
 	if !tt.HasText("No connections yet") || !tt.HasText("New Connection…") {

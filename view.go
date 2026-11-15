@@ -126,8 +126,10 @@ func (app *App) navigator(c *ui.Context) {
 		// 波 98：标题短一点（DataGrip 就叫 Navigator）——260px 的默认侧栏宽度
 		// 下「Database Navigator」+三个按钮会裁掉标题头。波 99：删除连接收进
 		// 头部按钮行（🗑），它不该占侧栏一整行。
-		panelHeader(c, t, "Navigator", func() {
-			if ui.Button(c, "＋").FontSize(10).Tooltip("New connection").Clicked() {
+		panelHeader(c, t, "Objects", func() {
+			// Short words rather than bare glyphs: the panel is 260px wide, and a
+			// glyph alone is a tooltip away from being understood.
+			if ui.Button(c, "New").FontSize(10).Tooltip("New connection").Clicked() {
 				app.openForm()
 			}
 			if ui.Button(c, "✎").FontSize(10).Tooltip("Edit the selected connection").Clicked() {
@@ -137,7 +139,7 @@ func (app *App) navigator(c *ui.Context) {
 				Tooltip("Delete the selected connection").Clicked() {
 				app.deleteConn(c)
 			}
-			if ui.Button(c, "⟳").FontSize(10).Disabled(!app.open).
+			if ui.Button(c, "Refresh").FontSize(10).Disabled(!app.open).
 				Tooltip("Refresh the schema tree (Ctrl+F5)").Clicked() {
 				app.refreshSchema()
 			}
