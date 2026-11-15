@@ -63,6 +63,30 @@ func (app *App) historyView(c *ui.Context) {
 				ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 					ui.Text(c, "History").FontSize(13).Bold()
 					ui.Spacer(c)
+					// Mark the chosen statement as one to find again: the history
+					// keeps everything that ran, a favorite is the one the user
+					// wants back without scrolling (DBeaver's favorites, TablePlus's).
+					if ui.Button(c, "☆ Favorite").FontSize(10).
+						Tooltip("Mark the selected statement as a favorite").
+						Disabled(app.histID == "").Clicked() {
+						if i, err := strconv.Atoi(app.histID); err == nil {
+							app.store.ToggleHistoryFavorite(i)
+						}
+						app.invalidate()
+					}
+					if app.histFavOnly {
+						if ui.Button(c, "★ Favorites").FontSize(10).Tooltip("Show all statements").Clicked() {
+							app.histFavOnly = false
+							app.histID = ""
+							app.invalidate()
+						}
+					} else {
+						if ui.Button(c, "☆ Favorites").FontSize(10).Tooltip("Show favorites only").Clicked() {
+							app.histFavOnly = true
+							app.histID = ""
+							app.invalidate()
+						}
+					}
 					if ui.Button(c, "Clear").FontSize(10).Clicked() {
 						app.clearHistory()
 					}
@@ -92,17 +116,35 @@ func (app *App) historySidebar(c *ui.Context, t *ui.Theme) {
 	if app.store == nil {
 		return
 	}
-	entries := app.store.ListHistory()
-	if len(entries) == 0 {
+	all := app.store.ListHistory()
+	// "Favorites only" keeps the rows' own index, so choosing one still names
+	// the same statement in the full history.
+	shown := make([]int, 0, len(all))
+	for i, e := range all {
+		if app.histFavOnly && !e.Favorite {
+			continue
+		}
+		shown = append(shown, i)
+	}
+	if len(shown) == 0 {
+		if app.histFavOnly {
+			ui.Text(c, "No favorites yet — select a statement and choose ☆ Favorite.").
+				FontSize(10).TextColor(t.TextMuted).SingleLine()
+			return
+		}
 		ui.Text(c, "No statements yet").FontSize(10).TextColor(t.TextMuted).SingleLine()
 		return
 	}
 	prev := app.histID
 	ui.Sidebar(c, &app.histID, func() {
-		for i, e := range entries {
+		for _, i := range shown {
+			e := all[i]
 			item := ui.SidebarItem(c, strconv.Itoa(i), nil, historyLabel(e))
 			if !e.OK {
 				item.TextColor(t.Danger)
+			}
+			if e.Favorite {
+				item.TextColor(t.Accent)
 			}
 		}
 	})
@@ -110,8 +152,8 @@ func (app *App) historySidebar(c *ui.Context, t *ui.Theme) {
 	// names goes back into the editor. A change that comes from the list being
 	// rebuilt, as new statements arrive, leaves the SQL alone.
 	if app.histID != prev && app.histID != "" {
-		if i, err := strconv.Atoi(app.histID); err == nil && i >= 0 && i < len(entries) {
-			app.loadHistory(entries[i])
+		if i, err := strconv.Atoi(app.histID); err == nil && i >= 0 && i < len(all) {
+			app.loadHistory(all[i])
 		}
 	}
 }

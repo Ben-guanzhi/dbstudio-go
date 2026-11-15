@@ -209,7 +209,8 @@ type App struct {
 	// generation that drops a slow answer.
 	search treeSearch
 
-	histID string // the history entry the history sidebar shows, "" when none
+	histID      string // the history entry the history sidebar shows, "" when none
+	histFavOnly bool   // the history list shows favorites alone
 
 	treeGen uint64
 	// The connection's metadata cache, behind the catalog selectors. The fields

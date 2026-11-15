@@ -64,10 +64,11 @@ type Conn struct {
 // elapsed time is stored as the string the status line showed, so the history
 // reads the same the day it ran and later.
 type HistoryEntry struct {
-	SQL     string    `json:"sql"`
-	OK      bool      `json:"ok"`
-	Elapsed string    `json:"elapsed"`
-	At      time.Time `json:"at"`
+	SQL      string    `json:"sql"`
+	OK       bool      `json:"ok"`
+	Elapsed  string    `json:"elapsed"`
+	At       time.Time `json:"at"`
+	Favorite bool      `json:"favorite,omitempty"`
 }
 
 // histMax is how many statements the history keeps: older ones are dropped as
@@ -243,6 +244,21 @@ func (s *Store) ListHistory() []HistoryEntry {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return append([]HistoryEntry(nil), s.hist...)
+}
+
+// ToggleHistoryFavorite flips the favorite mark on the i-th entry and writes
+// the file. A favorite is a statement the user marked to find again — the
+// history keeps everything that ran, and a favorite is the one they want back
+// without scrolling.
+func (s *Store) ToggleHistoryFavorite(i int) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if i < 0 || i >= len(s.hist) {
+		return false
+	}
+	s.hist[i].Favorite = !s.hist[i].Favorite
+	_ = s.saveHistory()
+	return s.hist[i].Favorite
 }
 
 // ClearHistory drops every entry and writes the empty file.
