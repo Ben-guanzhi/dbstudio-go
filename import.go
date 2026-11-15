@@ -499,7 +499,7 @@ func (app *App) importView(c *ui.Context) {
 
 				// The mapping: one dropdown per file column.
 				ui.Text(c, "Map the file's columns to "+st.table+"'s").FontSize(11).Bold().TextColor(t.TextMuted)
-				ui.Scroll(c).Grow(1).FillWidth().Children(func() {
+				ui.Scroll(c).Grow(1).FillWidth().KeepScrollbars(true).Children(func() {
 					ui.Column(c).Gap(4).Children(func() {
 						for i := range st.labels {
 							i := i

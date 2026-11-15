@@ -72,7 +72,7 @@ func (app *App) historyView(c *ui.Context) {
 				})
 				ui.Text(c, "Choosing a statement puts it back in the editor.").
 					FontSize(10).TextColor(t.TextMuted).SingleLine()
-				ui.Scroll(c).Grow(1).FillWidth().Children(func() {
+				ui.Scroll(c).Grow(1).FillWidth().KeepScrollbars(true).Children(func() {
 					app.historySidebar(c, t)
 				})
 			})

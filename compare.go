@@ -322,7 +322,7 @@ func (app *App) compareView(c *ui.Context) {
 				}
 				// The entries: one line each, destructive ones marked.
 				if len(cm.entries) > 0 {
-					ui.Scroll(c).Grow(1).FillWidth().Children(func() {
+					ui.Scroll(c).Grow(1).FillWidth().KeepScrollbars(true).Children(func() {
 						ui.Column(c).Gap(2).Children(func() {
 							for _, e := range cm.entries {
 								row := string(e.Op) + "  " + e.Table
@@ -348,7 +348,7 @@ func (app *App) compareView(c *ui.Context) {
 				}
 				if cm.script != "" {
 					ui.Text(c, "Migration script (runs on "+cm.dstName+")").FontSize(11).Bold().TextColor(t.TextMuted)
-					ui.Scroll(c).Height(140).FillWidth().Children(func() {
+					ui.Scroll(c).Height(140).FillWidth().KeepScrollbars(true).Children(func() {
 						ui.Column(c).Children(func() {
 							ui.Text(c, cm.script).FontSize(11)
 						})

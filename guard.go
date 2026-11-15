@@ -132,7 +132,7 @@ func (app *App) confirmView(c *ui.Context) {
 			Children(func() {
 				ui.Text(c, "Run this statement?").FontSize(13).Bold()
 				ui.Text(c, cr.why).TextColor(t.Danger).FontSize(11).Wrap()
-				ui.Scroll(c).Grow(1).FillWidth().Children(func() {
+				ui.Scroll(c).Grow(1).FillWidth().KeepScrollbars(true).Children(func() {
 					ui.Text(c, cr.sql).FontSize(11).Wrap()
 				})
 				ui.Row(c).Gap(8).Children(func() {

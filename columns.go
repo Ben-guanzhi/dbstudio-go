@@ -430,7 +430,7 @@ func (app *App) columnsView(c *ui.Context) {
 			Background(t.Surface).Radius(10).Border(1, t.Border).
 			Children(func() {
 				ui.Text(c, "Columns").FontSize(13).Bold()
-				ui.Scroll(c).Grow(1).FillWidth().Children(func() {
+				ui.Scroll(c).Grow(1).FillWidth().KeepScrollbars(true).Children(func() {
 					ui.Column(c).Gap(3).Children(func() {
 						for _, name := range order {
 							name := name

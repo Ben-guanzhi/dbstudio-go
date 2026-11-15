@@ -132,7 +132,7 @@ func (app *App) connInfoView(c *ui.Context) {
 			Background(t.Surface).Radius(10).Border(1, t.Border).
 			Children(func() {
 				ui.Text(c, "Connection Info").FontSize(13).Bold()
-				ui.Scroll(c).Grow(1).FillWidth().Children(func() {
+				ui.Scroll(c).Grow(1).FillWidth().KeepScrollbars(true).Children(func() {
 					ui.Column(c).Gap(3).Children(func() {
 						for _, r := range ci.rows {
 							ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {

@@ -137,7 +137,7 @@ func (app *App) structureGrid(c *ui.Context, t *ui.Theme) {
 		case 6:
 			ui.Text(c, info.Comment).TextColor(t.TextMuted).SingleLine()
 		}
-	}).Grow(1)
+	}).Grow(1).KeepScrollbars(true)
 }
 
 // stTableOnly splits the "schema.table" heading back into its parts for the

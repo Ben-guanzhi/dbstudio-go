@@ -394,7 +394,7 @@ func (app *App) messageBody(c *ui.Context, t *ui.Theme) {
 		emptyState(c, t, "Nothing reported — run a statement to see its rows, time and errors")
 		return
 	}
-	ui.Scroll(c).Grow(1).FillWidth().Children(func() {
+	ui.Scroll(c).Grow(1).FillWidth().KeepScrollbars(true).Children(func() {
 		ui.Column(c).Gap(4).Padding(6, 8).Children(func() {
 			for _, l := range lines {
 				label, ink := l.text, t.TextMuted
