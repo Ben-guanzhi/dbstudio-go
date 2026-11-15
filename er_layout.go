@@ -17,7 +17,11 @@ package main
 //
 // 波 101 续四十五.
 
-import "sort"
+import (
+	"sort"
+
+	"github.com/egoist/mygo/ui"
+)
 
 // ER 图的几何常量。盒宽固定（列名长短不改变盒宽，长名截断）；行高固定。
 const (
@@ -45,10 +49,19 @@ type erCol struct {
 }
 
 // erTable 是一个表节点：列、键，和布局给出的盒子。
+//
+// off 是用户拖拽累积的偏移：布局给出 Box，拖拽把 off 加在上面，连线跟着盒子
+// 走。拖拽因此不改变布局——重新布局（换 schema、刷新）时 off 归零。
 type erTable struct {
 	Name string
 	Cols []erCol
 	Box  erBox
+	off  ui.Point
+}
+
+// at 是盒子当前的位置：布局位置加上拖拽偏移。
+func (t *erTable) at() (x, y float32) {
+	return t.Box.X + t.off.X, t.Box.Y + t.off.Y
 }
 
 // erFK 是一条外键边：From 表的 FromCol 指向 To 表的 ToCol。

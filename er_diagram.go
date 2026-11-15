@@ -98,46 +98,50 @@ func erCanvasSize(m *erModel) (w, h float32) {
 	return w + erGap, h + erGap
 }
 
-// paintER draws the graph into r: edges first (under the boxes), then a box
-// per table with its title and columns.
-func paintER(p *ui.Painter, r ui.Rect, m *erModel, t *ui.Theme) {
+// paintEdges draws the foreign keys into r: from the referencing box's right
+// edge to the referenced box's left edge, as an elbow (out right, in left) so
+// the direction reads.
+func paintEdges(p *ui.Painter, r ui.Rect, m *erModel, t *ui.Theme) {
 	byName := make(map[string]erTable, len(m.Tables))
 	for _, tb := range m.Tables {
 		byName[tb.Name] = tb
 	}
-	// 连线：从引用者盒子的右缘到被引用者盒子的左缘，走一条折线（右出、左进），
-	// 让方向可读。
 	for _, fk := range m.FKs {
 		from, ok1 := byName[fk.From]
 		to, ok2 := byName[fk.To]
 		if !ok1 || !ok2 {
 			continue
 		}
-		x0 := from.Box.X + from.Box.W
-		y0 := from.Box.Y + from.Box.H/2
-		x1 := to.Box.X
-		y1 := to.Box.Y + to.Box.H/2
+		fx, fy := from.at()
+		tx, ty := to.at()
+		x0, y0 := fx+from.Box.W, fy+from.Box.H/2 // 引用者右缘中点
+		x1, y1 := tx, ty+to.Box.H/2              // 被引用者左缘中点
 		mid := (x0 + x1) / 2
-		p.Line(x0, y0, mid, y0, 1, t.Border)
-		p.Line(mid, y0, mid, y1, 1, t.Border)
-		p.Line(mid, y1, x1, y1, 1, t.Border)
+		p.Line(r.X+x0, r.Y+y0, r.X+mid, r.Y+y0, 1, t.Border)
+		p.Line(r.X+mid, r.Y+y0, r.X+mid, r.Y+y1, 1, t.Border)
+		p.Line(r.X+mid, r.Y+y1, r.X+x1, r.Y+y1, 1, t.Border)
 	}
-	// 盒子：表面底 + 边框 + 标题 + 每列一行，主键列标出来。
-	for _, tb := range m.Tables {
-		b := tb.Box
-		p.Fill(ui.Rect{X: r.X + b.X, Y: r.Y + b.Y, W: b.W, H: b.H}, t.Surface, 6)
-		p.Stroke(ui.Rect{X: r.X + b.X, Y: r.Y + b.Y, W: b.W, H: b.H}, t.Border, 6, 1)
-		p.Text(r.X+b.X+8, r.Y+b.Y+6, tb.Name, 12, t.Text)
-		y := b.Y + erTitleH
-		for _, c := range tb.Cols {
-			name := c.Name
-			if c.PK {
-				name = "• " + name
+}
+
+// erBoxView builds one table's box as real elements, not painted glyphs: the
+// table's name and its columns are Text, so assistive technology reads the
+// diagram and a test can find a box. The drag offset is the element's own, so
+// the box follows the pointer and the edges follow the box.
+func erBoxView(c *ui.Context, tb *erTable, t *ui.Theme) ui.Element {
+	x, y := tb.at()
+	return ui.Box(c).Absolute().Top(y).Left(x).Width(tb.Box.W).Height(tb.Box.H).
+		Background(t.Surface).Border(1, t.Border).Radius(6).Padding(4, 6).
+		Draggable(&tb.off, ui.DraggableOptions{}).
+		Children(func() {
+			ui.Text(c, tb.Name).Bold().FontSize(12).SingleLine()
+			for _, col := range tb.Cols {
+				name := col.Name
+				if col.PK {
+					name = "• " + name
+				}
+				ui.Text(c, name).FontSize(10).TextColor(t.TextMuted).SingleLine()
 			}
-			p.Text(r.X+b.X+8, r.Y+y, name, 10, t.TextMuted)
-			y += erRowH
-		}
-	}
+		})
 }
 
 // openER builds the diagram and shows it.
@@ -174,8 +178,16 @@ func (app *App) erView(c *ui.Context) {
 				ui.Text(c, fmt.Sprintf("%d table(s)", len(m.Tables))+" · "+fmt.Sprintf("%d foreign key(s)", len(m.FKs))).
 					FontSize(10).TextColor(t.TextMuted).SingleLine()
 				ui.Scroll(c).Grow(1).FillWidth().KeepScrollbars(true).Children(func() {
-					ui.Box(c).Width(w).Height(h).Draw(func(p *ui.Painter, r ui.Rect) {
-						paintER(p, r, m, t)
+					// 每个盒子是独立元素（才能各自拖拽），连线画在它们之下的一层。
+					ui.Box(c).Width(w).Height(h).Children(func() {
+						ui.Box(c).Absolute().Top(0).Left(0).Width(w).Height(h).
+							Draw(func(p *ui.Painter, r ui.Rect) {
+								paintEdges(p, r, m, t)
+							})
+						for i := range m.Tables {
+							tb := &m.Tables[i]
+							erBoxView(c, tb, t)
+						}
 					})
 				})
 			})
