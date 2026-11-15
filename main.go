@@ -17,8 +17,8 @@ import (
 
 func main() {
 	app := &App{
-		splitSide:     260,
-		splitEditor:   300,
+		splitSide:     defaultSplitSide,
+		splitEditor:   defaultSplitEditor,
 		treeSel:       -1,
 		gridSel:       -1,
 		tabSel:        -1,

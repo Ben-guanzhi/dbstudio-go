@@ -150,20 +150,23 @@ func (app *App) treeRow(c *ui.Context, n treeNode) {
 		// click opens the menu that shows its DDL. One Text element, probed for
 		// the double click — a second unconditioned Text repeated the name and
 		// every table row read "erp_product erp_product…".
+		//
+		// The comment is the row's tooltip, not a second column: side by side the
+		// two halved each other and both read as "单..." / "客户跟...".
 		tw := ui.Text(c, n.label).Bold().ContextMenu(func(m *ui.Menu) {
 			app.treeNodeMenu(m, n)
 		})
+		if n.sub != "" {
+			tw.Tooltip(n.sub)
+		}
 		if tw.RowDoubleClicked() {
 			app.browseTable(n)
 			return
 		}
-		if n.sub != "" {
-			ui.Text(c, "  "+n.sub).TextColor(t.TextMuted).SingleLine()
-		}
 	case nodeColumn:
-		ui.Text(c, n.label)
+		cw := ui.Text(c, n.label)
 		if n.sub != "" {
-			ui.Text(c, "  "+n.sub).TextColor(t.TextMuted).SingleLine()
+			cw.Tooltip(n.sub)
 		}
 	case nodeSection:
 		// A section header: muted, so the schema's objects read as a grouping

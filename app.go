@@ -257,9 +257,16 @@ type App struct {
 
 	splitSide   float32
 	splitEditor float32
-
-	status string
+	status      string
 }
+
+// The split defaults, named so the reset path and its test share one number.
+// The editor opens at 220px: a statement is a few lines, and the grid below it
+// wants the rest of the window.
+const (
+	defaultSplitSide   float32 = 260
+	defaultSplitEditor float32 = 220
+)
 
 // initModalEditors builds the two editors the modals show, which are separate
 // from the query editor: the DDL viewer's, which is read-only, and the cell
@@ -288,8 +295,8 @@ func (app *App) initModalEditors() {
 }
 
 func (app *App) resetSplit() {
-	app.splitSide = 260
-	app.splitEditor = 300
+	app.splitSide = defaultSplitSide
+	app.splitEditor = defaultSplitEditor
 	app.invalidate()
 }
 

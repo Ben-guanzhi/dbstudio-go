@@ -103,8 +103,9 @@ func TestClearMessages(t *testing.T) {
 func TestResetSplit(t *testing.T) {
 	app := &App{splitSide: 10, splitEditor: 10}
 	app.resetSplit()
-	if app.splitSide != 260 || app.splitEditor != 300 {
-		t.Fatalf("split after reset = %v / %v, want 260 / 300", app.splitSide, app.splitEditor)
+	if app.splitSide != defaultSplitSide || app.splitEditor != defaultSplitEditor {
+		t.Fatalf("split after reset = %v / %v, want %v / %v",
+			app.splitSide, app.splitEditor, defaultSplitSide, defaultSplitEditor)
 	}
 }
 
