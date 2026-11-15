@@ -8,6 +8,7 @@ import (
 	"log"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/Ben-guanzhi/dbcore"
 	"github.com/Ben-guanzhi/dbcore/usability"
@@ -82,6 +83,7 @@ func main() {
 		// so they can be shown in a modal while the main editor keeps its place.
 		app.initModalEditors()
 
+		app.wantWidth, app.wantHeight = width, height
 		app.win = mygo.NewWindow(mygo.WindowOptions{
 			Title:     "DB Studio Go",
 			Width:     width,
@@ -96,6 +98,18 @@ func main() {
 			log.Printf("window icon: %v", err)
 		}
 		app.setMenu()
+		// The menu bar takes its height out of the client area after the window
+		// was sized, so the canvas would keep being laid out at a size the window
+		// no longer has. Asking for the content size again, now that the bar
+		// exists, makes the window grow to match (WORKSPACE §74).
+		app.fitContentToWindow()
+		// PROBE: what the window reports, and what the content is laid out at.
+		go func() {
+			time.Sleep(3 * time.Second)
+			w, h := app.win.Size()
+			cw, ch := app.win.ContentSize()
+			log.Printf("PROBE bounds=%dx%d content=%dx%d diff=%dx%d", w, h, cw, ch, w-cw, h-ch)
+		}()
 		// The session is written on quit, so a restart opens what was open. A
 		// quit from the menu and one from the window's close button both pass
 		// here.

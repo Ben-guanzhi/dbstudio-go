@@ -257,7 +257,12 @@ type App struct {
 
 	splitSide   float32
 	splitEditor float32
-	status      string
+
+	// The size the window was created with: what the layout was given, and what
+	// it keeps being laid out at (WORKSPACE §74).
+	wantWidth  int
+	wantHeight int
+	status     string
 }
 
 // The split defaults, named so the reset path and its test share one number.
