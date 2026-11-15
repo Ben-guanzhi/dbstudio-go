@@ -212,6 +212,12 @@ type App struct {
 	histID      string // the history entry the history sidebar shows, "" when none
 	histFavOnly bool   // the history list shows favorites alone
 
+	// shortcutsOpen is the keyboard-shortcuts window: every accelerator the
+	// menus declare, on one screen. The list is read from the menu itself, so
+	// adding a menu item cannot leave the cheat sheet behind.
+	shortcutsOpen bool
+	menuItems     []*mygo.MenuItem
+
 	treeGen uint64
 	// The connection's metadata cache, behind the catalog selectors. The fields
 	// stay here (embedded struct, promoted), so a test building an App by hand

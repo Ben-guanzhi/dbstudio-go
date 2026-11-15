@@ -13,9 +13,11 @@ import (
 	"github.com/egoist/mygo"
 )
 
-// setMenu wires the window's menu bar.
+// setMenu wires the window's menu bar. It also keeps the items, so the
+// keyboard-shortcuts window can list exactly what the menus declare — one
+// source, no drift between the two.
 func (app *App) setMenu() {
-	app.win.SetMenu(mygo.NewMenu([]*mygo.MenuItem{
+	items := []*mygo.MenuItem{
 		{Label: "File", Submenu: []*mygo.MenuItem{
 			{Label: "New Connection", Accelerator: "CmdOrCtrl+N",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openForm() }},
@@ -97,10 +99,15 @@ func (app *App) setMenu() {
 		}},
 		{Role: mygo.RoleWindowMenu},
 		{Label: "Help", Submenu: []*mygo.MenuItem{
+			{Label: "Keyboard Shortcuts", Accelerator: "CmdOrCtrl+Shift+/",
+				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openShortcuts() }},
+			mygo.Separator(),
 			{Label: "About DB Studio Go",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openAbout() }},
 			{Label: "Connection Info…", Accelerator: "CmdOrCtrl+I",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openConnInfo() }},
 		}},
-	}))
+	}
+	app.menuItems = items
+	app.win.SetMenu(mygo.NewMenu(items))
 }
