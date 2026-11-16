@@ -22,7 +22,6 @@ import (
 	"dbstudio-go/internal/pluginsdk"
 )
 
-
 // pgHandler is one connection: the plugin process IS the connection, so the
 // handle is opened in Open from argv's spec and lives for the process.
 type pgHandler struct {

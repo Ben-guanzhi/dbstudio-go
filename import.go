@@ -39,7 +39,6 @@ import (
 // reports a useful "row 40,000 of 400,000".
 const importBatchSize = 500
 
-
 // importMaxCell is the longest cell text the parser keeps; a CSV cell beyond it
 // is cut, as the grid's own cells are.
 const importMaxCell = 4096
@@ -419,7 +418,7 @@ func (app *App) runImport() {
 			st.imported = done
 			st.progress = fmt.Sprintf("%d / %d rows", done, total)
 			st.err = ""
-			app.status = fmt.Sprintf("Imported %s into %s", pluralRows(done),  table)
+			app.status = fmt.Sprintf("Imported %s into %s", pluralRows(done), table)
 			// Re-read the table the import went into, if the grid holds it.
 			if app.edit.active && app.edit.table == table && app.edit.refresh != nil {
 				app.edit.refresh()

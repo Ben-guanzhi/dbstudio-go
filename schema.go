@@ -19,7 +19,6 @@ package main
 //     borrow. Selecting "(all schemas)" reopens with the connection's own value.
 
 import (
-
 	"github.com/Ben-guanzhi/dbcore"
 	"github.com/egoist/mygo/ui"
 

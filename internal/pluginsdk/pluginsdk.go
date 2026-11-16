@@ -145,7 +145,12 @@ func Serve(h Handler, banner plugindriver.Banner, r io.Reader, w io.Writer) erro
 			}
 			frame, _ := json.Marshal(res)
 			wmu.Lock()
-			fmt.Fprintf(w, "%s\n", frame)
+			// 写不进去说明对端已经走了：吞掉这个错误会让插件**永远等下去**
+			// （它收不到回复）。就此结束这次请求。
+			if _, err := fmt.Fprintf(w, "%s\n", frame); err != nil {
+				wmu.Unlock()
+				return
+			}
 			wmu.Unlock()
 		}(req)
 	}
