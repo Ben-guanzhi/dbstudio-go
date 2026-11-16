@@ -164,3 +164,48 @@ func TestVerifyDumpFileRejectsEmpty(t *testing.T) {
 		t.Error("不存在的产物没有被判为失败")
 	}
 }
+
+// TestRestoreExternalCarriesTheConnectionAndHidesThePassword：恢复的参数与
+// 安全底线，与备份同一套。
+func TestRestoreExternalCarriesTheConnectionAndHidesThePassword(t *testing.T) {
+	dir := t.TempDir()
+	dump := filepath.Join(dir, "b.sql")
+	if err := os.WriteFile(dump, []byte("SELECT 1;\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	// 用一个真的假工具（shell / bat）把参数与环境变量落到文件里，再检查。
+	var name, script string
+	out := filepath.Join(dir, "seen.txt")
+	if runtime.GOOS == "windows" {
+		name = filepath.Join(dir, "fake-psql.bat")
+		script = "@echo off\r\n> \"" + out + "\" echo %*\r\n>> \"" + out + "\" echo PGPASSWORD=%PGPASSWORD%\r\n"
+	} else {
+		name = filepath.Join(dir, "fake-psql")
+		script = "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"" + out + "\"\nprintf 'PGPASSWORD=%s\\n' \"$PGPASSWORD\" >> \"" + out + "\"\n"
+	}
+	if err := os.WriteFile(name, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	conn := Conn{Kind: "postgres", Host: "db.example", Port: 5433, User: "alice", Password: "s3cret", Database: "shop"}
+	if err := restoreExternal(context.Background(), name, conn, dump, true); err != nil {
+		t.Fatalf("restoreExternal: %v", err)
+	}
+	raw, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(raw)
+	for _, want := range []string{"--host=db.example", "--port=5433", "--username=alice", "--dbname=shop", "--file=" + dump, "--no-psqlrc"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("参数里没有 %q：%s", want, got)
+		}
+	}
+	if strings.Contains(got, "s3cret") && !strings.Contains(got, "PGPASSWORD=s3cret") {
+		t.Errorf("口令进了 argv（而不是环境变量）：%s", got)
+	}
+	if !strings.Contains(got, "PGPASSWORD=s3cret") {
+		t.Errorf("口令没进环境变量：%s", got)
+	}
+}

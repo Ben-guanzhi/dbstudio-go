@@ -48,8 +48,12 @@ func resolveDumpTool(envVar, name string) (string, error) {
 }
 
 // pgDumpArgs 拼 pg_dump 参数（口令不在这里——走 PGPASSWORD）。
+//
+// --clean --if-exists 让产物自带 DROP：恢复因此是幂等的（与 SQLite 的「先删
+// 表再重建」同一语义），恢复到还有表的库不会卡在第一条 CREATE 上。
 func pgDumpArgs(conn Conn, outPath string) []string {
 	args := []string{
+		"--clean", "--if-exists",
 		"--host=" + conn.Host,
 		"--port=" + strconv.Itoa(conn.Port),
 		"--username=" + conn.User,
@@ -68,6 +72,7 @@ func pgDumpArgs(conn Conn, outPath string) []string {
 func mysqlDumpArgs(conn Conn, outPath string) []string {
 	args := []string{
 		"--single-transaction", "--quick",
+		"--add-drop-table",
 		"--host=" + conn.Host,
 		"--port=" + strconv.Itoa(conn.Port),
 		"--user=" + conn.User,
@@ -126,6 +131,54 @@ func verifyDumpFile(path string) error {
 	}
 	if info.Size() == 0 {
 		return fmt.Errorf("备份产物是空文件（工具没写出任何东西）: %s", path)
+	}
+	return nil
+}
+
+// restoreExternal 用 psql / mysql 把 .sql 导回数据库——备份的另一半。
+//
+// 备份产物自带 DROP（--clean / --add-drop-table），所以恢复是幂等的：恢复到
+// 还有表的库会先删掉它们，不会卡在第一条 CREATE 上。口令同样走环境变量。
+func restoreExternal(ctx context.Context, tool string, conn Conn, dumpPath string, pg bool) error {
+	var args []string
+	if pg {
+		args = []string{
+			"--host=" + conn.Host,
+			"--port=" + strconv.Itoa(conn.Port),
+			"--username=" + conn.User,
+			"--dbname=" + conn.Database,
+			"--file=" + dumpPath,
+			"--no-psqlrc", // 用户的 .psqlrc 不该改变一次恢复的行为
+		}
+	} else {
+		args = []string{
+			"--host=" + conn.Host,
+			"--port=" + strconv.Itoa(conn.Port),
+			"--user=" + conn.User,
+			"--protocol=TCP",
+			conn.Database,
+		}
+	}
+	f, err := os.Open(dumpPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	cmd := exec.CommandContext(ctx, tool, args...)
+	cmd.Env = dumpToolEnv(conn, pg)
+	if pg {
+		// psql 自己读 --file。
+	} else {
+		cmd.Stdin = f // mysql 从标准输入读 SQL
+	}
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		if msg := strings.TrimSpace(stderr.String()); msg != "" {
+			return fmt.Errorf("%s: %s", err, dumpErrLine(msg))
+		}
+		return err
 	}
 	return nil
 }

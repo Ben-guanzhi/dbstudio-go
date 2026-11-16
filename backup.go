@@ -148,20 +148,19 @@ func quoteIdent(s string) string {
 
 // restoreDB 把一个 .sql 备份导回当前连接的库——备份的另一半。
 //
-// 用户在对话框里选一个 .sql（默认过滤 .sql/.txt），文件按 splitSQL 逐条切开
-// （引号和注释里的分号不算），在**独立连接**上执行：恢复不该动主连接的
-// 事务与状态。
-//
-// 与备份一样目前只支持 SQLite（文件型）；MySQL / PostgreSQL 的恢复同样走
-// 它们的原生工具。
+// SQLite 在**独立连接**上按 splitSQL 逐条执行（引号和注释里的分号不算）；
+// MySQL / PostgreSQL 交给原生的 mysql / psql 读同一个文件。恢复是破坏性的：
+// 备份产物自带 DROP，会把目标库现有的表换掉。
 func (app *App) restoreDB() {
 	if !app.open {
 		app.status = "Not connected"
 		app.invalidate()
 		return
 	}
-	if app.engine() != "sqlite" || app.conn.File == "" {
-		app.status = "Restore: SQLite only for now"
+	engine := app.engine()
+	pg := engine == "postgres"
+	if engine != "sqlite" && !pg && engine != "mysql" {
+		app.status = "Restore: unsupported engine " + engine
 		app.invalidate()
 		return
 	}
@@ -182,10 +181,41 @@ func (app *App) restoreDB() {
 		return
 	}
 	file := paths[0]
+
+	// 外部引擎先确认工具在（缺失时立刻说，不进 goroutine）。
+	var tool, toolEnv, toolName string
+	if engine != "sqlite" {
+		if pg {
+			toolEnv, toolName = envPgDump, "psql"
+		} else {
+			toolEnv, toolName = envMysqlDump, "mysql"
+		}
+		var err error
+		tool, err = resolveDumpTool(toolEnv, toolName)
+		if err != nil {
+			app.status = err.Error()
+			app.invalidate()
+			return
+		}
+	}
+
 	app.status = "Restoring…"
 	app.invalidate()
 	go func() {
-		n, err := restoreSQLFile(context.Background(), file, app.conn.File)
+		if engine == "sqlite" {
+			n, err := restoreSQLFile(context.Background(), file, app.conn.File)
+			app.post(func() {
+				if err != nil {
+					app.errMsg = "Restore failed: " + err.Error()
+					app.status = ""
+					return
+				}
+				app.errMsg = ""
+				app.status = fmt.Sprintf("Restored %d statements from %s (current tables replaced)", n, filepath.Base(file))
+			})
+			return
+		}
+		err := restoreExternal(context.Background(), tool, app.conn, file, pg)
 		app.post(func() {
 			if err != nil {
 				app.errMsg = "Restore failed: " + err.Error()
@@ -193,7 +223,7 @@ func (app *App) restoreDB() {
 				return
 			}
 			app.errMsg = ""
-			app.status = fmt.Sprintf("Restored %d statements from %s (current tables replaced)", n, filepath.Base(file))
+			app.status = fmt.Sprintf("Restored from %s (current tables replaced)", filepath.Base(file))
 		})
 	}()
 }

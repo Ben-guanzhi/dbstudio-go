@@ -318,11 +318,12 @@ func TestRestoreReportsAFailedStatement(t *testing.T) {
 	}
 }
 
-func TestRestoreRefusesANonSQLiteEngine(t *testing.T) {
-	app := &App{open: true}
-	app.conn = Conn{Name: "remote", Kind: "postgres", Host: "127.0.0.1"}
+// TestRestoreRefusesAnUnsupportedEngine：既不是 SQLite、也没有原生客户端的
+// 引擎明确拒绝。（mysql/postgres 会走 psql/mysql，那时才需要工具。）
+func TestRestoreRefusesAnUnsupportedEngine(t *testing.T) {
+	app := newBackupApp(t, Conn{Name: "mssql", Kind: "sqlserver", Host: "127.0.0.1"})
 	app.restoreDB()
-	if !strings.Contains(app.status, "SQLite only") {
-		t.Errorf("非 SQLite 的恢复请求没有被拒绝：%q", app.status)
+	if !strings.Contains(app.status, "unsupported engine") {
+		t.Errorf("不支持的引擎没有被拒绝：%q", app.status)
 	}
 }
