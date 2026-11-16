@@ -8,7 +8,6 @@ import (
 	"log"
 	"path/filepath"
 	"strconv"
-	"time"
 
 	"github.com/Ben-guanzhi/dbcore"
 	"github.com/Ben-guanzhi/dbcore/usability"
@@ -103,13 +102,6 @@ func main() {
 		// no longer has. Asking for the content size again, now that the bar
 		// exists, makes the window grow to match (WORKSPACE §74).
 		app.fitContentToWindow()
-		// PROBE: what the window reports, and what the content is laid out at.
-		go func() {
-			time.Sleep(3 * time.Second)
-			w, h := app.win.Size()
-			cw, ch := app.win.ContentSize()
-			log.Printf("PROBE bounds=%dx%d content=%dx%d diff=%dx%d", w, h, cw, ch, w-cw, h-ch)
-		}()
 		// The session is written on quit, so a restart opens what was open. A
 		// quit from the menu and one from the window's close button both pass
 		// here.

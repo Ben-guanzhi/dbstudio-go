@@ -53,7 +53,7 @@ func (app *App) setMenu() {
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openConnInfo() }},
 			{Label: "Compare Schemas…",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openCompare() }},
-			{Label: "ER Diagram",
+			{Label: "ER Diagram", Accelerator: "CmdOrCtrl+Shift+G",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openER() }},
 			mygo.Separator(),
 			{Label: "Run Query", Accelerator: "CmdOrCtrl+Enter",

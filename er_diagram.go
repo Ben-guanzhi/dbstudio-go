@@ -11,7 +11,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/egoist/mygo/ui"
 )
@@ -144,6 +143,41 @@ func erBoxView(c *ui.Context, tb *erTable, t *ui.Theme) ui.Element {
 		})
 }
 
+// erEnsureLoaded asks for whatever the diagram still needs: the schema's table
+// list, then each table's columns. Both loads are asynchronous and end with an
+// invalidate, so the next frame builds the view again — by then the answer is
+// in and the diagram draws itself.
+//
+// It reports whether everything the diagram needs is in hand.
+func (app *App) erEnsureLoaded() bool {
+	if !app.open || app.db == nil {
+		return true // nothing to load; erView says so
+	}
+	schemas := app.SchemaNames()
+	if app.schema != "" {
+		schemas = []string{app.schema}
+	}
+	for _, s := range schemas {
+		if _, st := app.TablesOf(s); st == TablesNotLoaded {
+			app.loadTables(s)
+			return false
+		}
+	}
+	for _, s := range schemas {
+		tabs, _ := app.TablesOf(s)
+		for _, t := range tabs {
+			if len(app.erModel.Tables) >= erMaxTb {
+				break
+			}
+			if _, st := app.ColumnsOf(s, t.Name); st == ColsNotLoaded {
+				app.loadColumns(s, t.Name)
+				return false
+			}
+		}
+	}
+	return true
+}
+
 // openER builds the diagram and shows it.
 func (app *App) openER() {
 	app.erModel = app.erFetch()
@@ -158,8 +192,6 @@ func (app *App) erView(c *ui.Context) {
 		return
 	}
 	t := c.Theme()
-	m := app.erModel
-	w, h := erCanvasSize(m)
 	ui.Modal(c, &app.erOpen, func() {
 		ui.Column(c).Gap(8).Padding(12).Width(720).Height(560).
 			Background(t.Surface).Radius(10).Border(1, t.Border).
@@ -171,12 +203,18 @@ func (app *App) erView(c *ui.Context) {
 						app.erOpen = false
 					}
 				})
+				if !app.erEnsureLoaded() {
+					ui.Text(c, "Loading the schema…").FontSize(10).TextColor(t.TextMuted).SingleLine()
+					return
+				}
+				// 每帧重取：列的异步加载完成后会 invalidate，这一帧就有数据了。
+				app.erModel = app.erFetch()
+				m := app.erModel
+				w, h := erCanvasSize(m)
 				if len(m.Tables) == 0 {
 					ui.Text(c, "No tables in this schema.").FontSize(10).TextColor(t.TextMuted).SingleLine()
 					return
 				}
-				ui.Text(c, fmt.Sprintf("%d table(s)", len(m.Tables))+" · "+fmt.Sprintf("%d foreign key(s)", len(m.FKs))).
-					FontSize(10).TextColor(t.TextMuted).SingleLine()
 				ui.Scroll(c).Grow(1).FillWidth().KeepScrollbars(true).Children(func() {
 					// 每个盒子是独立元素（才能各自拖拽），连线画在它们之下的一层。
 					ui.Box(c).Width(w).Height(h).Children(func() {

@@ -16,22 +16,23 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-// erApp is a connected app with a schema of tables, their columns and a
-// foreign key between two of them.
+// erApp is a connected app with a schema of tables whose columns are already
+// in the catalog — the diagram's data is in hand, which is the state a user
+// reaches after the tree has loaded the schema.
 func erApp(t *testing.T) *App {
 	t.Helper()
 	app := connectedApp(t, 3)
 	schema := "gs_cloud"
 	app.catalog.cols = map[string][]dbcore.ColumnInfo{
-		schema + "\x00departments": {
-			{Name: "id", Type: "int", IsPrimaryKey: true},
-			{Name: "name", Type: "text"},
-		},
-		schema + "\x00employees": {
+		schema + "\x00erp_table_000": {
 			{Name: "id", Type: "int", IsPrimaryKey: true},
 			{Name: "dept_id", Type: "int"},
 		},
-		schema + "\x00salaries": {
+		schema + "\x00erp_table_001": {
+			{Name: "id", Type: "int", IsPrimaryKey: true},
+			{Name: "name", Type: "text"},
+		},
+		schema + "\x00erp_table_002": {
 			{Name: "emp_id", Type: "int"},
 			{Name: "amount", Type: "decimal"},
 		},
@@ -60,10 +61,14 @@ func TestERModalOpensAndCounts(t *testing.T) {
 	tt := ui.NewTester(app.view, 900, 700)
 	tt.Frame()
 
-	for _, want := range []string{"ER Diagram", "3 table(s)"} {
+	for _, want := range []string{"ER Diagram", "erp_table_000", "erp_table_001", "erp_table_002"} {
 		if !tt.HasText(want) {
 			t.Errorf("the diagram does not show %q; texts = %v", want, tt.Texts())
 		}
+	}
+	// 主键列有标记。
+	if !tt.HasText("• id") {
+		t.Errorf("the primary key column is not marked; texts = %v", tt.Texts())
 	}
 }
 
