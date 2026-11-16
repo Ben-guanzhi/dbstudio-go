@@ -18,8 +18,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -215,7 +217,29 @@ func (app *App) restoreDB() {
 			})
 			return
 		}
-		err := restoreExternal(context.Background(), tool, app.conn, file, pg)
+		// SSH 连接：隧道 + 本地转发，工具连转发端口。
+		ctx, cancel := context.WithTimeout(context.Background(), sshTimeout)
+		defer cancel()
+		tun, terr := openTunnel(ctx, app.conn)
+		if terr != nil {
+			app.post(func() { app.errMsg = "Restore failed: " + terr.Error(); app.status = "" })
+			return
+		}
+		if tun != nil {
+			defer tun.Close()
+		}
+		useConn := app.conn
+		if tun != nil {
+			remote := net.JoinHostPort(app.conn.Host, strconv.Itoa(app.conn.Port))
+			fwd, ferr := startPortForward(ctx, tun.Dialer(), remote)
+			if ferr != nil {
+				app.post(func() { app.errMsg = "Restore failed: " + ferr.Error(); app.status = "" })
+				return
+			}
+			defer fwd.close()
+			useConn = tunneledConn(app.conn, fwd)
+		}
+		err := restoreExternal(ctx, tool, useConn, file, pg)
 		app.post(func() {
 			if err != nil {
 				app.errMsg = "Restore failed: " + err.Error()
@@ -325,18 +349,41 @@ func (app *App) backupDB() {
 		app.invalidate()
 		return
 	}
-	var args []string
-	if pg {
-		args = pgDumpArgs(app.conn, outPath)
-	} else {
-		args = mysqlDumpArgs(app.conn, outPath)
-	}
-	env := dumpToolEnv(app.conn, pg)
 
 	app.status = "Backing up…"
 	app.invalidate()
 	go func() {
-		if err := runDumpTool(context.Background(), tool, args, env, outPath); err != nil {
+		// SSH 连接：先建隧道，再在本地开一个转发端口给工具连。
+		ctx, cancel := context.WithTimeout(context.Background(), sshTimeout)
+		defer cancel()
+		tun, err := openTunnel(ctx, app.conn)
+		if err != nil {
+			app.post(func() { app.errMsg = "Backup failed: " + err.Error(); app.status = "" })
+			return
+		}
+		if tun != nil {
+			defer tun.Close()
+		}
+		useConn := app.conn
+		if tun != nil {
+			remote := net.JoinHostPort(app.conn.Host, strconv.Itoa(app.conn.Port))
+			fwd, err := startPortForward(ctx, tun.Dialer(), remote)
+			if err != nil {
+				app.post(func() { app.errMsg = "Backup failed: " + err.Error(); app.status = "" })
+				return
+			}
+			defer fwd.close()
+			useConn = tunneledConn(app.conn, fwd)
+		}
+
+		var args []string
+		if pg {
+			args = pgDumpArgs(useConn, outPath)
+		} else {
+			args = mysqlDumpArgs(useConn, outPath)
+		}
+		env := dumpToolEnv(useConn, pg)
+		if err := runDumpTool(ctx, tool, args, env, outPath); err != nil {
 			app.post(func() { app.errMsg = "Backup failed: " + err.Error(); app.status = "" })
 			return
 		}
