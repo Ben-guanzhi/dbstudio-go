@@ -341,9 +341,11 @@ func (app *App) compareView(c *ui.Context) {
 					})
 				}
 				if len(cm.warnings) > 0 {
-					ui.Text(c, "Warnings").FontSize(11).Bold().TextColor(t.TextMuted)
+					// 警告用 Warning 色（琥珀）：灰色会让它读起来像脚注，
+					// 而它是「这步能做，但你要知道」的那类信息。
+					ui.Text(c, "Warnings").FontSize(11).Bold().TextColor(t.Warning)
 					for _, w := range cm.warnings {
-						ui.Text(c, w).TextColor(t.TextMuted).Wrap()
+						ui.Text(c, w).TextColor(t.Warning).Wrap().Selectable()
 					}
 				}
 				if cm.script != "" {

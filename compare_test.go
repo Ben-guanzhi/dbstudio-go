@@ -131,12 +131,15 @@ func TestCompareModalRenders(t *testing.T) {
 		}},
 		stmts:  []schemadiff.Statement{{EntryID: "audit/create_table", SQL: "CREATE TABLE audit (id INTEGER);"}},
 		script: "CREATE TABLE audit (id INTEGER);",
+		// 警告要看得见——它说的是「这步能做，但你要知道」。
+		warnings: []string{"audit 已存在数据，重建会清空它"},
 	}
 	view := newViewApp(t, app.store)
 	view.compare = app.compare
 
 	tt := ui.NewTester(view.view, 1200, 760)
-	for _, want := range []string{"Compare Schemas", "Source", "Target", "Diff", "Cancel", "Apply to Target"} {
+	for _, want := range []string{"Compare Schemas", "Source", "Target", "Diff", "Cancel", "Apply to Target",
+		"Warnings", "audit 已存在数据，重建会清空它"} {
 		if !tt.HasText(want) {
 			t.Errorf("the compare modal does not show %q; texts = %v", want, tt.Texts())
 		}
