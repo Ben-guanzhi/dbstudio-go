@@ -92,6 +92,8 @@ func (app *App) setMenu() {
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openHistory() }},
 			{Label: "Backup Database…",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.backupDB() }},
+			{Label: "Restore Database…",
+				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.restoreDB() }},
 			{Label: "Columns…",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openColumns() }},
 			{Label: "Plugins…",

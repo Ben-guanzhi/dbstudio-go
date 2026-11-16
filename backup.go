@@ -25,6 +25,7 @@ import (
 
 	"github.com/Ben-guanzhi/dbcore"
 	"github.com/Ben-guanzhi/dbcore/sqlite"
+	"github.com/egoist/mygo"
 )
 
 // backupBatchSize 是一次读多少行：足够小以控内存，足够大以减少往返。
@@ -143,6 +144,105 @@ func textOf(row []dbcore.Value, i int) string {
 // quoteIdent 用双引号包一个标识符，里面的双引号翻倍——SQL 的标准转义。
 func quoteIdent(s string) string {
 	return `"` + strings.ReplaceAll(s, `"`, `""`) + `"`
+}
+
+// restoreDB 把一个 .sql 备份导回当前连接的库——备份的另一半。
+//
+// 用户在对话框里选一个 .sql（默认过滤 .sql/.txt），文件按 splitSQL 逐条切开
+// （引号和注释里的分号不算），在**独立连接**上执行：恢复不该动主连接的
+// 事务与状态。
+//
+// 与备份一样目前只支持 SQLite（文件型）；MySQL / PostgreSQL 的恢复同样走
+// 它们的原生工具。
+func (app *App) restoreDB() {
+	if !app.open {
+		app.status = "Not connected"
+		app.invalidate()
+		return
+	}
+	if app.engine() != "sqlite" || app.conn.File == "" {
+		app.status = "Restore: SQLite only for now"
+		app.invalidate()
+		return
+	}
+	paths, err := mygo.Dialog.Open(mygo.OpenDialogOptions{
+		Title:       "Restore into " + app.conn.Name,
+		ButtonLabel: "Restore",
+		// 恢复是破坏性的：它先删掉目标库现有的表，再重建。这句说明必须写在
+		// 用户按下按钮之前。
+		Message: "Restore replaces the database's current tables with the backup's.",
+		Filters: []mygo.FileFilter{
+			{Name: "SQL dump", Extensions: []string{"sql", "txt", "dump"}},
+		},
+	})
+	if err != nil {
+		return // 用户取消
+	}
+	if len(paths) == 0 || paths[0] == "" {
+		return
+	}
+	file := paths[0]
+	app.status = "Restoring…"
+	app.invalidate()
+	go func() {
+		n, err := restoreSQLFile(context.Background(), file, app.conn.File)
+		app.post(func() {
+			if err != nil {
+				app.errMsg = "Restore failed: " + err.Error()
+				app.status = ""
+				return
+			}
+			app.errMsg = ""
+			app.status = fmt.Sprintf("Restored %d statements from %s (current tables replaced)", n, filepath.Base(file))
+		})
+	}()
+}
+
+// restoreSQLFile 把一个 .sql 文件的语句逐条执行到 target 库（独立连接），
+// 返回执行了多少条。它是恢复的核心，与对话框分开，好让测试直接驱动。
+//
+// **恢复前会删掉目标库里现有的表**：备份产物含 CREATE TABLE，而恢复的语义
+// 是「回到备份时的状态」，不是「往现状里追加」。这与 sqlite3 .dump + 恢复
+// 的语义一致；不删的话，恢复到还有表的库会卡在第一条 CREATE 上。
+func restoreSQLFile(ctx context.Context, path, target string) (int, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return 0, err
+	}
+	stmts := splitSQL(string(raw))
+	if len(stmts) == 0 {
+		return 0, fmt.Errorf("文件里没有可执行的语句")
+	}
+	drv, err := sqlite.Open(target)
+	if err != nil {
+		return 0, err
+	}
+	defer drv.Close()
+	sql, ok := drv.AsSQL()
+	if !ok {
+		return 0, fmt.Errorf("没有 SQL 接口")
+	}
+	// 先清场：删掉现有表（索引/触发器随表一起走）。
+	schema, err := sql.Execute(ctx,
+		"SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")
+	if err != nil {
+		return 0, fmt.Errorf("读现有表: %w", err)
+	}
+	for _, row := range schema.Rows {
+		name := textOf(row, 0)
+		if name == "" {
+			continue
+		}
+		if _, err := sql.Execute(ctx, "DROP TABLE IF EXISTS "+quoteIdent(name)); err != nil {
+			return 0, fmt.Errorf("删表 %s: %w", name, err)
+		}
+	}
+	for i, stmt := range stmts {
+		if _, err := sql.Execute(ctx, stmt); err != nil {
+			return i, fmt.Errorf("第 %d 条: %w", i+1, err)
+		}
+	}
+	return len(stmts), nil
 }
 
 // backupDB 把当前连接备份成一个 .sql 文件，写在保存连接的同一目录里（与

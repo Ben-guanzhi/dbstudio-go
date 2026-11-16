@@ -218,3 +218,77 @@ func TestBackupRefusesANonSQLiteEngine(t *testing.T) {
 		t.Errorf("非 SQLite 的备份请求没有被拒绝：%q", app.status)
 	}
 }
+
+// TestBackupRestoreRoundTrip 是**闭环**的那一条：备份 → 清空 → 恢复 → 数据回来。
+//
+// 备份与恢复是同一件事的两半，单独测任何一半都可能两半对不上（比如备份用了
+// 一种引号、恢复按另一种切）。这条测试只认「恢复之后数据和备份前一致」。
+func TestBackupRestoreRoundTrip(t *testing.T) {
+	src := newSQLite(t)
+	execAll(t, src, `
+CREATE TABLE t (id INTEGER PRIMARY KEY, name TEXT NOT NULL, note BLOB);
+INSERT INTO t (id, name, note) VALUES (1, 'Ada', X'48656C6C6F');
+INSERT INTO t (id, name, note) VALUES (2, 'Alan', NULL);
+CREATE INDEX idx_t_name ON t(name);
+`)
+	before := queryAll(t, src)
+
+	// 备份（直接调核心，绕开文件位置）。
+	dump, err := dumpSQLite(context.Background(), src)
+	if err != nil {
+		t.Fatalf("dumpSQLite: %v", err)
+	}
+	dumpPath := filepath.Join(t.TempDir(), "backup.sql")
+	if err := os.WriteFile(dumpPath, []byte(dump), 0o600); err != nil {
+		t.Fatalf("写备份: %v", err)
+	}
+
+	// 清空（模拟「库坏了」）。
+	execAll(t, src, `DELETE FROM t;`)
+	if got := queryAll(t, src); len(got) != 0 {
+		t.Fatalf("清空失败，还有 %d 行", len(got))
+	}
+
+	// 恢复。
+	n, err := restoreSQLFile(context.Background(), dumpPath, src)
+	if err != nil {
+		t.Fatalf("restoreSQLFile: %v", err)
+	}
+	if n == 0 {
+		t.Fatal("恢复报告执行了 0 条语句")
+	}
+
+	// 数据回来了，且与备份前一致。
+	after := queryAll(t, src)
+	if len(after) != len(before) {
+		t.Fatalf("恢复后 %d 行, want %d", len(after), len(before))
+	}
+	for i := range before {
+		if after[i] != before[i] {
+			t.Errorf("第 %d 行 = %v, want %v", i, after[i], before[i])
+		}
+	}
+}
+
+// TestRestoreReportsAFailedStatement：坏语句要点名是哪一条，而不是笼统失败。
+func TestRestoreReportsAFailedStatement(t *testing.T) {
+	src := newSQLite(t)
+	dumpPath := filepath.Join(t.TempDir(), "bad.sql")
+	if err := os.WriteFile(dumpPath, []byte("CREATE TABLE ok (id INTEGER);\n这不是 SQL;\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := restoreSQLFile(context.Background(), dumpPath, src); err == nil {
+		t.Fatal("坏语句没有报错")
+	} else if !strings.Contains(err.Error(), "第 2 条") {
+		t.Errorf("错误没有点名是哪一条：%v", err)
+	}
+}
+
+func TestRestoreRefusesANonSQLiteEngine(t *testing.T) {
+	app := &App{open: true}
+	app.conn = Conn{Name: "remote", Kind: "postgres", Host: "127.0.0.1"}
+	app.restoreDB()
+	if !strings.Contains(app.status, "SQLite only") {
+		t.Errorf("非 SQLite 的恢复请求没有被拒绝：%q", app.status)
+	}
+}
