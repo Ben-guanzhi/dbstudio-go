@@ -318,7 +318,7 @@ func (app *App) compareView(c *ui.Context) {
 					ui.Text(c, "Pick a source and a target, then Diff.").TextColor(t.TextMuted)
 				}
 				if len(cm.entries) > 0 {
-					ui.Text(c, strconv.Itoa(len(cm.entries))+" change(s)").FontSize(12).Bold()
+					ui.Text(c, strconv.Itoa(len(cm.entries))+" change(s)").FontSize(11).Bold()
 				}
 				// The entries: one line each, destructive ones marked.
 				if len(cm.entries) > 0 {
