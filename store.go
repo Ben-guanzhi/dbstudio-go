@@ -49,6 +49,9 @@ type Conn struct {
 	SSHPassword   string `json:"sshPassword,omitempty"`
 	SSHKeyFile    string `json:"sshKeyFile,omitempty"`
 	SSHPassphrase string `json:"sshPassphrase,omitempty"`
+	// SSHKnownHosts 是连接指定的可信主机密钥文件（空则用系统默认的
+	// known_hosts）。备份/恢复走隧道时用它确认对端，而不是静默信任。
+	SSHKnownHosts string `json:"sshKnownHosts,omitempty"`
 
 	// ReadOnly locks the connection against statements that change data or
 	// schema. It is what a production connection should carry, and it is saved

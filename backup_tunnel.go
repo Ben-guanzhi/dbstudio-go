@@ -32,7 +32,11 @@ func openTunnel(ctx context.Context, conn Conn) (*tunnel.Tunnel, error) {
 		Password:      conn.SSHPassword,
 		KeyFile:       conn.SSHKeyFile,
 		KeyPassphrase: conn.SSHPassphrase,
-		UnknownHost:   nil,
+		// KnownHosts 是连接可以指定的可信主机密钥文件（空则用用户默认的）。
+		// 它也是**可测试性**的注入点：测试写一个只含自己密钥的临时文件。
+		KnownHosts: conn.SSHKnownHosts,
+		// 未知主机仍然拒绝：文件里没有的主机不被静默信任。
+		UnknownHost: nil,
 	})
 }
 

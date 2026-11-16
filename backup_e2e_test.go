@@ -14,7 +14,12 @@ import (
 	"crypto/rand"
 	"io"
 	"net"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strconv"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -23,9 +28,10 @@ import (
 )
 
 // startSSHServer 起一个本地 SSH 服务器，把收到的 TCP 通道转发到 target。
-// 返回它的地址。
-func startSSHServer(t *testing.T, target string) (string, int) {
+// 返回它的地址、写进 known_hosts 用的那一行主机密钥、以及通道计数。
+func startSSHServer(t *testing.T, target string) (string, int, string, *int32) {
 	t.Helper()
+	var channels int32
 	_, priv, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		t.Fatalf("生成主机密钥: %v", err)
@@ -53,7 +59,27 @@ func startSSHServer(t *testing.T, target string) (string, int) {
 			if err != nil {
 				return
 			}
-			go serveSSH(c, cfg, target)
+			go func(c net.Conn) {
+				conn, chans, reqs, err := ssh.NewServerConn(c, cfg)
+				if err != nil {
+					return
+				}
+				defer conn.Close()
+				go ssh.DiscardRequests(reqs)
+				for newCh := range chans {
+					if newCh.ChannelType() != "direct-tcpip" {
+						_ = newCh.Reject(ssh.UnknownChannelType, "只转发 TCP")
+						continue
+					}
+					atomic.AddInt32(&channels, 1)
+					ch, chReqs, err := newCh.Accept()
+					if err != nil {
+						continue
+					}
+					go ssh.DiscardRequests(chReqs)
+					go bridge(ch, target)
+				}
+			}(c)
 		}
 	}()
 
@@ -62,30 +88,9 @@ func startSSHServer(t *testing.T, target string) (string, int) {
 		t.Fatal(err)
 	}
 	port, _ := strconv.Atoi(portStr)
-	return host, port
-}
-
-// serveSSH 处理一条 SSH 连接：接受 direct-tcpip 通道，把通道桥到 target。
-func serveSSH(c net.Conn, cfg *ssh.ServerConfig, target string) {
-	conn, chans, reqs, err := ssh.NewServerConn(c, cfg)
-	if err != nil {
-		return
-	}
-	defer conn.Close()
-	go ssh.DiscardRequests(reqs)
-
-	for newCh := range chans {
-		if newCh.ChannelType() != "direct-tcpip" {
-			_ = newCh.Reject(ssh.UnknownChannelType, "只转发 TCP")
-			continue
-		}
-		ch, chReqs, err := newCh.Accept()
-		if err != nil {
-			continue
-		}
-		go ssh.DiscardRequests(chReqs)
-		go bridge(ch, target)
-	}
+	// known_hosts 的一行：非标准端口写成 [host]:port。
+	keyLine := "[" + host + "]:" + strconv.Itoa(port) + " " + strings.TrimSpace(string(ssh.MarshalAuthorizedKey(signer.PublicKey())))
+	return host, port, keyLine, &channels
 }
 
 // bridge 把一条通道双向拷贝到 target。
@@ -106,19 +111,25 @@ func bridge(ch ssh.Channel, target string) {
 // 链路必须把字节送过去。
 func TestTunnelEndToEnd(t *testing.T) {
 	target := echoServer(t)
-	sshHost, sshPort := startSSHServer(t, target)
+	sshHost, sshPort, keyLine, _ := startSSHServer(t, target)
+
+	// 把测试服务器的密钥写进一个临时 known_hosts——真实用户也是这么做的
+	// （第一次连接时确认指纹）。
+	kh := filepath.Join(t.TempDir(), "known_hosts")
+	if err := os.WriteFile(kh, []byte(keyLine+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	tun, err := tunnel.Open(ctx, tunnel.Config{
-		Host:     sshHost,
-		Port:     sshPort,
-		User:     "tester",
-		Password: "whatever",
-		// 测试服务器是自签密钥：明确接受它的指纹（真实使用时 UnknownHost
-		// 为 nil，未知主机一律拒绝）。
-		UnknownHost: func(host, fingerprint string) bool { return true },
+		Host:        sshHost,
+		Port:        sshPort,
+		User:        "tester",
+		Password:    "whatever",
+		KnownHosts:  kh,
+		UnknownHost: nil, // 密钥在文件里，未知主机仍应拒绝
 	})
 	if err != nil {
 		t.Fatalf("开隧道: %v", err)
@@ -154,19 +165,96 @@ func TestTunnelEndToEnd(t *testing.T) {
 // TestTunnelRefusesAnUnknownHost：未知主机被拒绝——这是备份不走错服务器的底线。
 func TestTunnelRefusesAnUnknownHost(t *testing.T) {
 	target := echoServer(t)
-	sshHost, sshPort := startSSHServer(t, target)
+	sshHost, sshPort, _, _ := startSSHServer(t, target)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	// known_hosts 是空的：密钥不在里面，未知主机必须被拒绝。
+	kh := filepath.Join(t.TempDir(), "known_hosts")
+	if err := os.WriteFile(kh, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
 	_, err := tunnel.Open(ctx, tunnel.Config{
 		Host:        sshHost,
 		Port:        sshPort,
 		User:        "tester",
 		Password:    "whatever",
-		UnknownHost: nil, // 与 openTunnel 的真实策略一致
+		KnownHosts:  kh,
+		UnknownHost: nil,
 	})
 	if err == nil {
 		t.Error("未知主机没有被拒绝")
+	}
+}
+
+// TestBackupGoesThroughTheTunnel 是**组合分支**的端到端验证：backupDB 建隧道、
+// 起本地转发、把 dump 工具指向转发端口——SSH 服务器必须看到通道。
+//
+// 这条测试是上一轮指出的可测试性缺口：openTunnel 此前硬编码 UnknownHost: nil
+// 且不接受 known_hosts 路径，测试无法注入可信主机。现在连接可以指定
+// SSHKnownHosts，组合分支因此可测。
+func TestBackupGoesThroughTheTunnel(t *testing.T) {
+	target := echoServer(t) // 隧道的终点（工具并不真连它，通道出现即可）
+	sshHost, sshPort, keyLine, _ := startSSHServer(t, target)
+
+	kh := filepath.Join(t.TempDir(), "known_hosts")
+	if err := os.WriteFile(kh, []byte(keyLine+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	// 假 mysqldump：把收到的参数原样记下来。
+	//
+	// 它**不连数据库**（通道为 0 是正常的——真的 mysqldump 才会连），所以这里
+	// 验证的是组合分支的另一半：**工具被指向了转发地址**，而不是数据库的
+	// 内网地址。地址替换是「经隧道」的体现。
+	dir := t.TempDir()
+	marker := filepath.Join(dir, "args.txt")
+	var tool string
+	if runtime.GOOS == "windows" {
+		tool = filepath.Join(dir, "fake-mysqldump.bat")
+		script := "@echo off\r\necho %* > \"" + marker + "\"\r\n"
+		if err := os.WriteFile(tool, []byte(script), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		tool = filepath.Join(dir, "fake-mysqldump")
+		script := "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"" + marker + "\"\n"
+		if err := os.WriteFile(tool, []byte(script), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv(envMysqlDump, tool)
+
+	app := newBackupApp(t, Conn{
+		Name: "via-ssh", Kind: "mysql",
+		Host: "db.internal", Port: 3306, User: "u", Password: "p", Database: "d",
+		SSHHost: sshHost, SSHPort: sshPort, SSHUser: "tester", SSHPassword: "pw",
+		SSHKnownHosts: kh,
+	})
+	app.backupDB()
+
+	// 工具被调用了，且它收到的地址是**转发地址**（127.0.0.1），不是数据库的
+	// 内网地址——组合分支（建隧道 → 起转发 → 指向转发端口）就此成立。
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		if _, err := os.Stat(marker); err == nil {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	raw, err := os.ReadFile(marker)
+	if err != nil {
+		t.Fatalf("工具没被调用（没有参数记录 %s）；状态 = %q, 错误 = %q", marker, app.status, app.errMsg)
+	}
+	args := string(raw)
+	if !strings.Contains(args, "--host=127.0.0.1") {
+		t.Errorf("工具收到的不是转发地址：%s", args)
+	}
+	if strings.Contains(args, "db.internal") {
+		t.Errorf("工具仍收到数据库的内网地址（没走隧道）：%s", args)
+	}
+	if strings.Contains(args, "--host=127.0.0.1") && !strings.Contains(args, "db.internal") {
+		t.Logf("工具收到转发地址：%s", strings.TrimSpace(args))
 	}
 }
