@@ -98,6 +98,9 @@ func TestNoWriteOnlyAppFields(t *testing.T) {
 	t.Logf("扫描了 %d 个字段", len(uses))
 }
 
+// acceleratorRE 匹配 menu.go 里声明的菜单加速键。
+var acceleratorRE = regexp.MustCompile(`Accelerator:\s*"([^"]+)"`)
+
 // shortcutCallRE 匹配 c.Shortcut(修饰键, 键) 的调用。
 var shortcutCallRE = regexp.MustCompile(`c\.Shortcut\(([^,]+),\s*(ui\.Key\w+)\)`)
 
@@ -127,11 +130,18 @@ var keyNames = map[string]string{
 // 速查此前只从菜单生成，而编辑器与分页的九颗键由 view.go / pager.go 直接处理
 // ——用户看不到它们。这条测试让「加一颗键」不可能漏掉速查。
 func TestHandledShortcutsAreListed(t *testing.T) {
-	// 速查里的键：菜单声明的（含 Workbench 组）。菜单数据在运行期构造，这里
-	// 只对照**非菜单**的那组——view.go / pager.go 处理的键本该全在里面。
+	// 速查里的键：Workbench 组 + **菜单声明的 Accelerator**（直接从 menu.go
+	// 源码扫——菜单是运行期构造的，扫源码才不用造一个 App）。
 	listed := map[string]bool{}
 	for _, r := range workbenchShortcuts {
 		listed[r.keys] = true
+	}
+	if raw, err := os.ReadFile("menu.go"); err == nil {
+		for _, m := range acceleratorRE.FindAllStringSubmatch(string(raw), -1) {
+			listed[m[1]] = true
+		}
+	} else {
+		t.Fatalf("读 menu.go: %v", err)
 	}
 
 	for _, name := range []string{"view.go", "pager.go", "form.go", "layout.go"} {

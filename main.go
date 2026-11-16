@@ -38,6 +38,10 @@ func main() {
 	app.grid.CellMenu = app.gridCellMenu
 
 	mygo.App.WhenReady(func() {
+		// 同一颗键被两处声明时，只有一个会真正触发（静默失效）。启动时记下来。
+		if dups := app.duplicateShortcutCombos(); len(dups) > 0 {
+			log.Printf("快捷键冲突（只有一个会触发）：%v", dups)
+		}
 		store, err := NewStore()
 		if err != nil {
 			log.Fatal(err)

@@ -10,6 +10,8 @@ package main
 // adding a menu entry cannot leave this sheet behind: one source, no drift.
 
 import (
+	"sort"
+
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 )
@@ -26,6 +28,31 @@ type shortcutRow struct {
 	menu, action, keys string
 }
 
+// duplicateShortcutCombos 返回被**多个入口**声明的键。
+//
+// 同一个键被两处声明，只有一个会真正触发（取决于注册顺序）——**静默失效**，
+// 运行时看不出来。这个模式来自 TableProGo（它的 shortcuts.ts 用一张表同时
+// 驱动处理器与帮助面板，并在启动时断言无重复）。
+//
+// 返回的键按字母排序，便于测试与日志。
+func (app *App) duplicateShortcutCombos() []string {
+	seen := map[string]int{}
+	for _, r := range app.shortcutRows() {
+		if r.keys == "" {
+			continue
+		}
+		seen[r.keys]++
+	}
+	var out []string
+	for keys, n := range seen {
+		if n > 1 {
+			out = append(out, keys)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
 // shortcutRows walks the menus and collects every item that declares an
 // accelerator. Items without one (an action with no keys) are not shortcuts
 // and are left out, and the system menus (Edit, Window) carry no label of
@@ -34,7 +61,8 @@ type shortcutRow struct {
 // view.go / pager.go 直接处理。它们必须单列一组——否则速查只列菜单声明过的
 // 键，用户看不到这九颗。
 var workbenchShortcuts = []shortcutRow{
-	{menu: "Workbench", action: "Run statement / commit", keys: "CmdOrCtrl+Enter"},
+	// 注意：Cmd+Enter（执行）**不在这里**——菜单的 Run Query 已经声明了它。
+	// 同一颗键声明两次，只有一个会触发（duplicateShortcutCombos 会抓到）。
 	{menu: "Workbench", action: "New console", keys: "CmdOrCtrl+T"},
 	{menu: "Workbench", action: "Close console", keys: "CmdOrCtrl+Shift+W"},
 	{menu: "Workbench", action: "Next console", keys: "CmdOrCtrl+Tab"},

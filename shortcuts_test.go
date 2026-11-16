@@ -56,6 +56,16 @@ func TestShortcutRowsComeFromTheMenu(t *testing.T) {
 	}
 }
 
+// TestNoDuplicateShortcutCombos：同一个键被多处声明时，只有一个会触发
+// （静默失效）。模式来自 TableProGo 的 shortcuts.ts——一张表驱动处理与帮助，
+// 并断言无重复。
+func TestNoDuplicateShortcutCombos(t *testing.T) {
+	app := shortcutApp(t)
+	if dups := app.duplicateShortcutCombos(); len(dups) > 0 {
+		t.Errorf("这些键被多处声明，只有一个会真正触发：%v", dups)
+	}
+}
+
 func TestShortcutSheetShowsTheKeys(t *testing.T) {
 	app := shortcutApp(t)
 	app.shortcutsOpen = true
