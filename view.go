@@ -418,9 +418,9 @@ func (app *App) messageBody(c *ui.Context, t *ui.Theme) {
 					ink = t.Danger
 				}
 				if l.kind == msgStatement || l.kind == msgError {
-					ui.Text(c, label).TextColor(ink).Wrap()
+					ui.Text(c, label).TextColor(ink).Wrap().Selectable()
 				} else {
-					ui.Text(c, label).TextColor(ink).SingleLine()
+					ui.Text(c, label).TextColor(ink).SingleLine().Selectable()
 				}
 			}
 		})
