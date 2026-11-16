@@ -228,7 +228,7 @@ func newBackupApp(t *testing.T, conn Conn) *App {
 func TestBackupRefusesAnUnsupportedEngine(t *testing.T) {
 	app := newBackupApp(t, Conn{Name: "mssql", Kind: "sqlserver", Host: "127.0.0.1"})
 	app.backupDB()
-	if !strings.Contains(app.status, "unsupported engine") {
+	if !strings.Contains(app.status, "is not available for") {
 		t.Errorf("不支持的引擎没有被拒绝：%q", app.status)
 	}
 }
@@ -323,7 +323,7 @@ func TestRestoreReportsAFailedStatement(t *testing.T) {
 func TestRestoreRefusesAnUnsupportedEngine(t *testing.T) {
 	app := newBackupApp(t, Conn{Name: "mssql", Kind: "sqlserver", Host: "127.0.0.1"})
 	app.restoreDB()
-	if !strings.Contains(app.status, "unsupported engine") {
+	if !strings.Contains(app.status, "is not available for") {
 		t.Errorf("不支持的引擎没有被拒绝：%q", app.status)
 	}
 }

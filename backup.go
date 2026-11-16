@@ -162,7 +162,7 @@ func (app *App) restoreDB() {
 	engine := app.engine()
 	pg := engine == "postgres"
 	if engine != "sqlite" && !pg && engine != "mysql" {
-		app.status = "Restore: unsupported engine " + engine
+		app.status = "Restore is not available for " + engine
 		app.invalidate()
 		return
 	}
@@ -339,7 +339,7 @@ func (app *App) backupDB() {
 		toolEnv, toolName = envPgDump, "pg_dump"
 	}
 	if !pg && app.engine() != "mysql" {
-		app.status = "Backup: unsupported engine " + app.engine()
+		app.status = "Backup is not available for " + app.engine()
 		app.invalidate()
 		return
 	}

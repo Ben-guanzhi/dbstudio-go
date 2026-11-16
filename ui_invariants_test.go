@@ -19,6 +19,81 @@ import (
 	"testing"
 )
 
+// shortcutCallRE 匹配 c.Shortcut(修饰键, 键) 的调用。
+var shortcutCallRE = regexp.MustCompile(`c\.Shortcut\(([^,]+),\s*(ui\.Key\w+)\)`)
+
+// keyNames 是键常量的显示名。**未知的键要报错**——新增一颗快捷键却忘了列进
+// 速查，正是这条测试要抓的。
+var keyNames = map[string]string{
+	"ui.KeyEnter":  "Enter",
+	"ui.KeyT":      "T",
+	"ui.KeyW":      "W",
+	"ui.KeyTab":    "Tab",
+	"ui.KeyZ":      "Z",
+	"ui.KeyF5":     "F5",
+	"ui.KeyF11":    "F11",
+	"ui.KeyLeft":   "Left",
+	"ui.KeyRight":  "Right",
+	"ui.KeyUp":     "Up",
+	"ui.KeyDown":   "Down",
+	"ui.KeyEscape": "Escape",
+	"ui.KeyH":      "H",
+	"ui.KeyG":      "G",
+	"ui.KeySlash":  "/",
+}
+
+// TestHandledShortcutsAreListed：view.go / pager.go 里处理的每一颗快捷键，都
+// 必须出现在速查表里（workbenchShortcuts 或菜单声明）。
+//
+// 速查此前只从菜单生成，而编辑器与分页的九颗键由 view.go / pager.go 直接处理
+// ——用户看不到它们。这条测试让「加一颗键」不可能漏掉速查。
+func TestHandledShortcutsAreListed(t *testing.T) {
+	// 速查里的键：菜单声明的（含 Workbench 组）。菜单数据在运行期构造，这里
+	// 只对照**非菜单**的那组——view.go / pager.go 处理的键本该全在里面。
+	listed := map[string]bool{}
+	for _, r := range workbenchShortcuts {
+		listed[r.keys] = true
+	}
+
+	for _, name := range []string{"view.go", "pager.go", "form.go", "layout.go"} {
+		raw, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatalf("读 %s: %v", name, err)
+		}
+		for _, m := range shortcutCallRE.FindAllStringSubmatch(string(raw), -1) {
+			mods, keyConst := m[1], m[2]
+			key, ok := keyNames[keyConst]
+			if !ok {
+				t.Errorf("%s: 键 %s 不在 keyNames 里——补上显示名，并确认它列进速查", name, keyConst)
+				continue
+			}
+			got := renderShortcutKeys(mods) + key
+			if !listed[got] {
+				t.Errorf("%s: 处理的快捷键 %q 没有列进速查表", name, got)
+			}
+		}
+	}
+}
+
+// renderShortcutKeys 把修饰键表达式渲染成速查里的写法。
+func renderShortcutKeys(expr string) string {
+	expr = strings.TrimSpace(expr)
+	if expr == "0" || expr == "" {
+		return ""
+	}
+	var parts []string
+	if strings.Contains(expr, "ui.Cmd") {
+		parts = append(parts, "CmdOrCtrl")
+	}
+	if strings.Contains(expr, "ui.Shift") {
+		parts = append(parts, "Shift")
+	}
+	if strings.Contains(expr, "ui.Alt") {
+		parts = append(parts, "Alt")
+	}
+	return strings.Join(parts, "+") + "+"
+}
+
 // emptyStateRE 匹配界面上的空状态文案（ui.Text 里以 No / Nothing / Loading 开头）。
 var emptyStateRE = regexp.MustCompile(`ui\.Text\(c,\s*"((?:No |Nothing |Loading )[^"]*)"`)
 

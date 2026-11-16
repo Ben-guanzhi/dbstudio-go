@@ -30,6 +30,21 @@ type shortcutRow struct {
 // accelerator. Items without one (an action with no keys) are not shortcuts
 // and are left out, and the system menus (Edit, Window) carry no label of
 // their own.
+// workbenchShortcuts 是**不在菜单里**的快捷键：编辑器与工作台的手势，由
+// view.go / pager.go 直接处理。它们必须单列一组——否则速查只列菜单声明过的
+// 键，用户看不到这九颗。
+var workbenchShortcuts = []shortcutRow{
+	{menu: "Workbench", action: "Run statement / commit", keys: "CmdOrCtrl+Enter"},
+	{menu: "Workbench", action: "New console", keys: "CmdOrCtrl+T"},
+	{menu: "Workbench", action: "Close console", keys: "CmdOrCtrl+Shift+W"},
+	{menu: "Workbench", action: "Next console", keys: "CmdOrCtrl+Tab"},
+	{menu: "Workbench", action: "Undo working-copy edit", keys: "CmdOrCtrl+Z"},
+	{menu: "Workbench", action: "Refresh result", keys: "F5"},
+	{menu: "Workbench", action: "Fullscreen", keys: "F11"},
+	{menu: "Workbench", action: "Previous page", keys: "Alt+Left"},
+	{menu: "Workbench", action: "Next page", keys: "Alt+Right"},
+}
+
 func (app *App) shortcutRows() []shortcutRow {
 	var out []shortcutRow
 	for _, m := range app.menuItems {
@@ -43,7 +58,7 @@ func (app *App) shortcutRows() []shortcutRow {
 			out = append(out, shortcutRow{menu: m.Label, action: it.Label, keys: it.Accelerator})
 		}
 	}
-	return out
+	return append(out, workbenchShortcuts...)
 }
 
 // shortcutsView draws the sheet: the menus as sections, each item a row of
@@ -65,7 +80,7 @@ func (app *App) shortcutsView(c *ui.Context) {
 						app.shortcutsOpen = false
 					}
 				})
-				ui.Text(c, "Every key the menus declare.").
+				ui.Text(c, "Every key the app answers to — menus and editor.").
 					FontSize(10).TextColor(t.TextMuted).SingleLine()
 				ui.Scroll(c).Grow(1).FillWidth().KeepScrollbars(true).Children(func() {
 					rows := app.shortcutRows()

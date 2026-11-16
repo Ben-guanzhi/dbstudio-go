@@ -101,7 +101,7 @@ func (app *App) readDDL(ctx context.Context, db *DB, n treeNode) (string, error)
 	if app.tableType(n) != "table" {
 		extra, ok := dbcore.AsExtraMetadata(db.Driver)
 		if !ok {
-			return "", fmt.Errorf("this driver does not expose view definitions")
+			return "", fmt.Errorf("View definitions are not available for this driver")
 		}
 		body, err := extra.ViewDefinition(ctx, n.parent, n.label)
 		if err != nil {

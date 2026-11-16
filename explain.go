@@ -72,9 +72,10 @@ func (app *App) runExplain() {
 	// engine that needs a Prepare/Cleanup bracket (SQL Server, Oracle) cannot be
 	// run on one pool session here yet.
 	if plan.Prepare != "" || plan.Cleanup != "" || plan.Query == "" {
-		app.errMsg = "EXPLAIN for " + app.engine() +
-			" needs a dedicated session, which this build does not open yet"
-		app.status = "Explain unsupported"
+		// 说清「什么不支持」，不说产品内部（"this build does not…" 对用户
+		// 没有意义）——面向用户的措辞。
+		app.errMsg = "EXPLAIN is not available for " + app.engine()
+		app.status = "EXPLAIN unavailable"
 		app.invalidate()
 		return
 	}
