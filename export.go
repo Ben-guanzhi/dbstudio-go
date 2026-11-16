@@ -35,10 +35,11 @@ const (
 	exportJSON
 	exportINSERT
 	exportExcel
+	exportTSV
 )
 
 // label is the format's display name and its file extension follows lower()
-// (csv / json / sql / xlsx).
+// (csv / json / sql / xlsx / tsv).
 func (f exportFormat) label() string {
 	switch f {
 	case exportJSON:
@@ -47,6 +48,8 @@ func (f exportFormat) label() string {
 		return "INSERT"
 	case exportExcel:
 		return "Excel"
+	case exportTSV:
+		return "TSV"
 	default:
 		return "CSV"
 	}
@@ -60,6 +63,8 @@ func (f exportFormat) ext() string {
 		return ".sql"
 	case exportExcel:
 		return ".xlsx"
+	case exportTSV:
+		return ".tsv"
 	default:
 		return ".csv"
 	}
@@ -89,6 +94,10 @@ func (app *App) exportResult(format exportFormat) {
 	case exportCSV:
 		var s string
 		s, renderErr = csvText(res)
+		data = []byte(s)
+	case exportTSV:
+		var s string
+		s, renderErr = tsvText(res)
 		data = []byte(s)
 	case exportExcel:
 		data, renderErr = excelBytes(res)

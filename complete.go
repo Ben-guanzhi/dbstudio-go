@@ -112,6 +112,12 @@ func (app *App) completionsAt(text string, head, start int) []editor.Completion 
 	clean := stripSQLLiterals(text)
 	before := clean[:head]
 
+	// 参数补全：光标前是 :name / @name / $name 的一部分时，列出这条语句里
+	// 出现过的参数名。写查询的人不该记住自己起了什么参数名。
+	if items := paramItems(clean, head, start); len(items) > 0 {
+		return items
+	}
+
 	// The word being completed is left out: what is before it is the context.
 	i := skipBackSpace(before, start)
 	if i > 0 && runeBefore(before, i) == '.' {
@@ -138,6 +144,49 @@ func (app *App) completionsAt(text string, head, start int) []editor.Completion 
 		return app.tableContextItems()
 	}
 	return app.generalItems(clean, head)
+}
+
+// paramItems 是 :name / @name / $name 的补全：列出这条语句里出现过的参数名。
+//
+// 参数名从语句自己提取（extractParams），所以补全的是**用户在这条查询里起的
+// 名字**，而不是什么全局列表。已经输入的部分用来过滤；同名参数只出现一次
+// （它绑定的是同一个值）。
+func paramItems(clean string, head, start int) []editor.Completion {
+	// 光标前正在输入的标识符，再往前一个字符是参数前缀。
+	i := skipBackSpace(clean[:head], start)
+	j := i
+	for j > 0 && isWordByte(clean[j-1]) {
+		j--
+	}
+	if j == 0 {
+		return nil
+	}
+	marker := clean[j-1]
+	// 只补全具名参数：extractParams 认 :name（$ 后面是位置号，没有名字
+	// 可补）。前缀与参数提取支持的一致，补全才不会给出提取不认的名字。
+	if marker != ':' {
+		return nil
+	}
+	typed := clean[j:i]
+
+	var set itemSet
+	seen := map[string]bool{}
+	for _, r := range extractParams(clean) {
+		if r.name == "" || seen[r.name] {
+			continue
+		}
+		seen[r.name] = true
+		if typed != "" && !strings.HasPrefix(r.name, typed) {
+			continue
+		}
+		set.add(editor.Completion{
+			Label:  string(marker) + r.name,
+			Insert: string(marker) + r.name,
+			Kind:   editor.CompletionVariable,
+			Detail: "参数",
+		})
+	}
+	return set.list()
 }
 
 // tableContextItems is the list after FROM and JOIN: the tables of the

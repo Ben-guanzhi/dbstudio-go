@@ -42,6 +42,7 @@ const (
 	copyUpdate
 	copyDelete
 	copyCSV
+	copyTSV
 )
 
 // label is the name a kind shows in the status line.
@@ -53,6 +54,8 @@ func (k copyKind) label() string {
 		return "UPDATE"
 	case copyDelete:
 		return "DELETE"
+	case copyTSV:
+		return "TSV"
 	default:
 		return "CSV"
 	}
@@ -214,11 +217,13 @@ func statement(kind copyKind, dbType, schema, table string, cols []dbcore.Column
 	}
 }
 
-// csvText renders the result's rows as CSV: a header of the column names and
-// one record per row, with NULL left empty as a spreadsheet reads it.
-func csvText(res *dbcore.QueryResult) (string, error) {
+// delimitedText renders the result's rows with a delimiter: a header of the
+// column names and one record per row, NULL left empty as a spreadsheet reads
+// it. ',' is CSV; '\t' is TSV, the format logs and data pipes are written in.
+func delimitedText(res *dbcore.QueryResult, comma rune) (string, error) {
 	var buf bytes.Buffer
 	w := csv.NewWriter(&buf)
+	w.Comma = comma
 
 	hdr := make([]string, len(res.Columns))
 	for i, c := range res.Columns {
@@ -240,12 +245,21 @@ func csvText(res *dbcore.QueryResult) (string, error) {
 	return buf.String(), w.Error()
 }
 
+// csvText 是逗号分隔的那一种。
+func csvText(res *dbcore.QueryResult) (string, error) { return delimitedText(res, ',') }
+
+// tsvText 是制表符分隔的那一种。
+func tsvText(res *dbcore.QueryResult) (string, error) { return delimitedText(res, '\t') }
+
 // copyText renders the rows named, all of them when rows is nil, as kind. The
 // result's own columns and rows are what it renders, so a table's name comes
 // from the working copy and a key from its columns.
 func (app *App) copyText(kind copyKind, res *dbcore.QueryResult, rows []int) (string, error) {
 	if kind == copyCSV {
 		return csvText(res)
+	}
+	if kind == copyTSV {
+		return tsvText(res)
 	}
 	dbType, schema, table, cols, ok := app.copyTable()
 	if !ok {
