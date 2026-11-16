@@ -50,7 +50,7 @@ func (app *App) formView(c *ui.Context) {
 			Children(func() {
 				ui.Text(c, "Connection").FontSize(15).Bold()
 				ui.Form(c, func() {
-					ui.Field(c, "Name", func() {
+					ui.Field(c, "Name *", func() {
 						ui.TextInput(c, &app.form.Name)
 					})
 					ui.Field(c, "Kind", func() {
@@ -72,12 +72,12 @@ func (app *App) formView(c *ui.Context) {
 						ui.Checkbox(c, &app.form.ReadOnly, "refuse statements that write")
 					})
 					if app.form.Kind == "sqlite" {
-						ui.Field(c, "File", func() {
+						ui.Field(c, "File *", func() {
 							ui.TextInput(c, &app.form.File)
 						})
 					} else {
 						ui.Row(c).Gap(8).Children(func() {
-							ui.Field(c, "Host", func() {
+							ui.Field(c, "Host *", func() {
 								ui.TextInput(c, &app.form.Host)
 							})
 							ui.Field(c, "Port", func() {
@@ -93,7 +93,7 @@ func (app *App) formView(c *ui.Context) {
 							})
 						})
 						ui.Row(c).Gap(8).Children(func() {
-							ui.Field(c, "Database", func() {
+							ui.Field(c, "Database *", func() {
 								ui.TextInput(c, &app.form.Database)
 							})
 							ui.Field(c, "Schema", func() {

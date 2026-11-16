@@ -262,4 +262,8 @@ func TestFormOffersColourAndLock(t *testing.T) {
 			t.Errorf("the form is missing %q; texts = %v", want, tt.Texts())
 		}
 	}
+	// 必填字段带 *——和 saveForm 的校验一致（Name/File/Host/Database）。
+	if !tt.HasText("Name *") {
+		t.Errorf("必填的 Name 没有标记；texts = %v", tt.Texts())
+	}
 }
