@@ -212,7 +212,7 @@ func (app *App) erView(c *ui.Context) {
 				m := app.erModel
 				w, h := erCanvasSize(m)
 				if len(m.Tables) == 0 {
-					ui.Text(c, "No tables in this schema.").FontSize(10).TextColor(t.TextMuted).SingleLine()
+					ui.Text(c, "No tables in this schema").FontSize(10).TextColor(t.TextMuted).SingleLine()
 					return
 				}
 				ui.Scroll(c).Grow(1).FillWidth().KeepScrollbars(true).Children(func() {

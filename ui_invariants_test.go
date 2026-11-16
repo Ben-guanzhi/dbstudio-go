@@ -19,6 +19,42 @@ import (
 	"testing"
 )
 
+// emptyStateRE 匹配界面上的空状态文案（ui.Text 里以 No / Nothing / Loading 开头）。
+var emptyStateRE = regexp.MustCompile(`ui\.Text\(c,\s*"((?:No |Nothing |Loading )[^"]*)"`)
+
+// TestEmptyStatesArePhrases：空状态是**短语**，不是句子——句号只留给带指令的
+// 完整句（如「No favorites yet — select a statement…」，其中的 — 是标志）。
+//
+// 这条与主按钮那条同源：措辞风格的分歧靠人眼看不全（9 处空状态散在 8 个文件
+// 里），靠源码扫描才抓得准。
+func TestEmptyStatesArePhrases(t *testing.T) {
+	files, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	checked := 0
+	for _, name := range files {
+		raw, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatalf("读 %s: %v", name, err)
+		}
+		for _, m := range emptyStateRE.FindAllStringSubmatch(string(raw), -1) {
+			text := m[1]
+			checked++
+			if strings.HasSuffix(text, ".") && !strings.Contains(text, "—") {
+				t.Errorf("%s: 空状态 %q 以句号结尾——短语不该有句号（带指令的完整句除外）", name, text)
+			}
+			if strings.HasSuffix(text, " ") {
+				t.Errorf("%s: 空状态 %q 以空格结尾", name, text)
+			}
+		}
+	}
+	if checked == 0 {
+		t.Fatal("一个空状态都没找到——正则或代码结构变了？")
+	}
+	t.Logf("检查了 %d 处空状态", checked)
+}
+
 // primaryButtonRE 匹配 ui.PrimaryButton(c, "…") 的文案。
 var primaryButtonRE = regexp.MustCompile(`ui\.PrimaryButton\(c,\s*"([^"]*)"`)
 

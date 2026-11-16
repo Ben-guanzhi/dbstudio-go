@@ -194,7 +194,7 @@ func (app *App) searchResults(c *ui.Context, t *ui.Theme) {
 		return
 	}
 	if len(s.hits) == 0 {
-		ui.Text(c, "No objects match.").TextColor(t.TextMuted).FontSize(11).Wrap()
+		ui.Text(c, "No objects match").TextColor(t.TextMuted).FontSize(11).Wrap()
 		return
 	}
 	ui.Text(c, strconv.Itoa(len(s.hits))+" object(s)").TextColor(t.TextMuted).FontSize(11)
