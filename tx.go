@@ -140,7 +140,7 @@ func (app *App) setAutocommit() {
 		app.commitTx()
 	}
 	if app.autocommit {
-		app.txErr = ""
+		app.errMsg = ""
 		app.status = "Autocommit on"
 	} else {
 		app.status = "Autocommit off"
@@ -154,7 +154,7 @@ func (app *App) commitTx() {
 		return
 	}
 	app.txBusy = true
-	app.txErr = ""
+	app.errMsg = ""
 	app.status = "Committing transaction…"
 	app.invalidate()
 	// S-01：commit 是"成功/失败"两态任务。
@@ -167,11 +167,11 @@ func (app *App) commitTx() {
 		app.txBusy = false
 		app.recordOutcome("commit", started, err, nil)
 		if err != nil {
-			app.txErr = "Commit transaction: " + err.Error()
+			app.errMsg = "Commit transaction: " + err.Error()
 			app.status = "Commit failed"
 			return
 		}
-		app.txErr = ""
+		app.errMsg = ""
 		app.status = "Transaction committed"
 		app.invalidate()
 		return
@@ -183,11 +183,11 @@ func (app *App) commitTx() {
 			app.txBusy = false
 			app.recordOutcome("commit", started, err, nil)
 			if err != nil {
-				app.txErr = "Commit transaction: " + err.Error()
+				app.errMsg = "Commit transaction: " + err.Error()
 				app.status = "Commit failed"
 				return
 			}
-			app.txErr = ""
+			app.errMsg = ""
 			app.status = "Transaction committed"
 		})
 	}()
@@ -199,7 +199,7 @@ func (app *App) rollbackTx() {
 		return
 	}
 	app.txBusy = true
-	app.txErr = ""
+	app.errMsg = ""
 	app.status = "Rolling back transaction…"
 	app.invalidate()
 	// S-01：rollback 成功的 outcome 是 reverted（任务级回退），失败是 error。
@@ -210,11 +210,11 @@ func (app *App) rollbackTx() {
 		app.txBusy = false
 		app.recordRollback(started, err)
 		if err != nil {
-			app.txErr = "Rollback transaction: " + err.Error()
+			app.errMsg = "Rollback transaction: " + err.Error()
 			app.status = "Rollback failed"
 			return
 		}
-		app.txErr = ""
+		app.errMsg = ""
 		app.status = "Transaction rolled back"
 		app.invalidate()
 		return
@@ -226,11 +226,11 @@ func (app *App) rollbackTx() {
 			app.txBusy = false
 			app.recordRollback(started, err)
 			if err != nil {
-				app.txErr = "Rollback transaction: " + err.Error()
+				app.errMsg = "Rollback transaction: " + err.Error()
 				app.status = "Rollback failed"
 				return
 			}
-			app.txErr = ""
+			app.errMsg = ""
 			app.status = "Transaction rolled back"
 		})
 	}()

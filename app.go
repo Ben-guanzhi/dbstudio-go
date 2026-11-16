@@ -36,7 +36,6 @@ type App struct {
 	txActive   bool
 	txID       string
 	txBusy     bool
-	txErr      string
 	// txIsolation is the isolation level a transaction opened from here asks
 	// for: "" means the engine's default, the rest are the kernel's TxMode
 	// spellings. The dropdown shows it only where a transaction can be opened.
@@ -130,7 +129,6 @@ type App struct {
 	ddlErr    string
 	ddlSchema string
 	ddlTable  string
-	ddlNode   treeNode
 	ddlGen    uint64
 
 	// The structure viewer's modal (波 100): the table's columns as a grid.

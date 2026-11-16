@@ -99,7 +99,7 @@ func (app *App) connectIn(name, schema string) {
 			app.txActive = false
 			app.txID = ""
 			app.txBusy = false
-			app.txErr = ""
+			app.errMsg = ""
 			app.txIsolation = ""
 			app.health = ""
 			app.healthGen++
@@ -144,7 +144,7 @@ func (app *App) disconnect() {
 	app.txActive = false
 	app.txID = ""
 	app.txBusy = false
-	app.txErr = ""
+	app.errMsg = ""
 	app.txIsolation = ""
 	app.health = ""
 	app.healthGen++

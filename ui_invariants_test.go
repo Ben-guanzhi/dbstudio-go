@@ -53,6 +53,51 @@ func TestNoRowSParenthetical(t *testing.T) {
 	}
 }
 
+// writeRE 匹配对 app.<字段> 的赋值；readRE 匹配其它任何出现。
+var (
+	writeRE = regexp.MustCompile(`app\.([a-zA-Z]\w*)\s*=[^=]`)
+	useRE   = regexp.MustCompile(`app\.([a-zA-Z]\w*)`)
+)
+
+// TestNoWriteOnlyAppFields：没有「只写不读」的 app 字段。
+//
+// `txErr` 曾是一个：事务失败的原因写进去，**从不被读**——用户只看到状态条的
+// 「Commit failed」，原因丢了。这类缺陷靠读代码很容易漏（每一处赋值都写得对，
+// 只是没人用），靠扫描字段的使用次数才抓得准。
+func TestNoWriteOnlyAppFields(t *testing.T) {
+	writes := map[string]int{}
+	uses := map[string]int{}
+
+	files, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range files {
+		if name == "ui_invariants_test.go" {
+			continue
+		}
+		raw, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatalf("读 %s: %v", name, err)
+		}
+		text := string(raw)
+		for _, m := range writeRE.FindAllStringSubmatch(text, -1) {
+			writes[m[1]]++
+		}
+		for _, m := range useRE.FindAllStringSubmatch(text, -1) {
+			uses[m[1]]++
+		}
+	}
+
+	for field, n := range writes {
+		// 出现次数 = 写次数 + 读次数；只有写说明没人读它。
+		if uses[field] <= n {
+			t.Errorf("app.%s 被写了 %d 次，却没有被读过——一个只写不读的字段没有意义（原因/状态丢了）", field, n)
+		}
+	}
+	t.Logf("扫描了 %d 个字段", len(uses))
+}
+
 // shortcutCallRE 匹配 c.Shortcut(修饰键, 键) 的调用。
 var shortcutCallRE = regexp.MustCompile(`c\.Shortcut\(([^,]+),\s*(ui\.Key\w+)\)`)
 

@@ -40,7 +40,6 @@ func (app *App) openDDL(n treeNode) {
 	app.ddlErr = ""
 	app.ddlSchema = n.parent
 	app.ddlTable = n.label
-	app.ddlNode = n
 	app.ddlGen++
 	app.invalidate()
 	app.loadDDL(n, app.ddlGen)
