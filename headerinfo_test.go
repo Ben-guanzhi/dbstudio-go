@@ -64,6 +64,25 @@ func TestColumnInfoText(t *testing.T) {
 
 // The tooltip is attached as the grid draws: drawing a result through the pane
 // must not panic with the header hook installed (the hook runs on a real cell).
+// TestFrozenColumnInfoSaysFrozen：冻结的列要在自己身上说出来——网格不画分隔线
+// （mygo 的 Fixed 只固定位置），tooltip 的 "frozen" 是屏幕阅读器与悬停能读到
+// 的那一半，标题上的强调线是眼睛能读到的那一半。
+func TestFrozenColumnInfoSaysFrozen(t *testing.T) {
+	app, tab := gridApp(t)
+	// 冻结前两列（id、name），note 保持活动。
+	app.freezeTo(tab, tab.result, 1)
+
+	if got := app.columnInfoText(tab, tab.result, 0); !strings.Contains(got, "frozen") {
+		t.Errorf("冻结列的说明没有 frozen：%q", got)
+	}
+	if got := app.columnInfoText(tab, tab.result, 1); !strings.Contains(got, "frozen") {
+		t.Errorf("冻结列的说明没有 frozen：%q", got)
+	}
+	if got := app.columnInfoText(tab, tab.result, 2); strings.Contains(got, "frozen") {
+		t.Errorf("没冻结的列被说成 frozen：%q", got)
+	}
+}
+
 func TestHeaderInfoRendersInPane(t *testing.T) {
 	app, _ := gridApp(t)
 	// Headers are built by the framework; this draws the whole pane so the

@@ -64,17 +64,29 @@ func (app *App) columnInfoText(t *resTab, res *dbcore.QueryResult, col int) stri
 	if c.Comment != "" {
 		parts = append(parts, c.Comment)
 	}
+	// 冻结是列的一种状态，和类型/可空一样属于「这列是什么」——写进 tooltip，
+	// 屏幕阅读器与悬停都读得到（网格本身不画分隔线）。
+	if t != nil && t.frozen(c.Name) {
+		parts = append(parts, "frozen")
+	}
 	return strings.Join(parts, " · ")
 }
 
-// headerInfo attaches the tooltip to a column's header cell. It is wired into
-// the grid's HeaderCell, which the framework calls as it builds each header.
-func (app *App) headerInfo(cell ui.Element, res *dbcore.QueryResult, visible []int, col int) {
+// headerInfo attaches the tooltip to a column's header cell, and marks a frozen
+// column with an accent line on its right edge. It is wired into the grid's
+// HeaderCell, which the framework calls as it builds each header.
+//
+// 网格自己不画冻结的分隔线（mygo 的 Fixed 只固定位置），所以冻结列在界面上
+// 看不出来——一条强调线加上 tooltip 的 "frozen" 是应用层能给的提示。
+func (app *App) headerInfo(cell ui.Element, t *ui.Theme, res *dbcore.QueryResult, visible []int, col int) {
 	i := t2col(visible, col)
 	if i < 0 {
 		return
 	}
 	if text := app.columnInfoText(app.tab(), res, i); text != "" {
 		cell.Tooltip(text)
+	}
+	if app.tab() != nil && i < len(res.Columns) && app.tab().frozen(res.Columns[i].Name) {
+		cell.BorderWidth(0, 2, 0, 0).BorderColor(t.Accent)
 	}
 }

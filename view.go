@@ -371,7 +371,7 @@ func (app *App) messageLines(tb *resTab) []messageLine {
 			if r.Truncated {
 				shown := len(r.Rows)
 				if r.TotalRows != nil {
-					out = append(out, messageLine{text: fmt.Sprintf("%s of an estimated %d, truncated", pluralRows(shown),  *r.TotalRows), kind: msgDetail})
+					out = append(out, messageLine{text: fmt.Sprintf("%s of an estimated %d, truncated", pluralRows(shown), *r.TotalRows), kind: msgDetail})
 				} else {
 					out = append(out, messageLine{text: fmt.Sprintf("%s, truncated", pluralRows(shown)), kind: msgDetail})
 				}
@@ -490,7 +490,7 @@ func (app *App) renderTable(c *ui.Context, t *ui.Theme) {
 	app.grid.HeaderMenu = func(m *ui.Menu, col int) { app.headerMenu(m, t2col(visible, col)) }
 	// The header's tooltip says what the column is: its type, nullability, key,
 	// default and comment, which is what decides whether a literal needs quotes.
-	app.grid.HeaderCell = func(cell ui.Element, col int) { app.headerInfo(cell, res, visible, col) }
+	app.grid.HeaderCell = func(cell ui.Element, col int) { app.headerInfo(cell, t, res, visible, col) }
 
 	// The grid shows the working copy's rows when it is editing, the result's
 	// otherwise.
