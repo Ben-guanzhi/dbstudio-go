@@ -444,6 +444,20 @@ func (app *App) renderTable(c *ui.Context, t *ui.Theme) {
 	// builder, the widths and the header menu work in.
 	tab := app.tab()
 	visible := app.visibleColumns(tab, res)
+	// 执行计划（SQLite 的 EXPLAIN QUERY PLAN：id/parent/detail）画成树：
+	// id/parent/notused 三列的作用由缩进承载，不再占列位。
+	plan := buildPlanTree(res)
+	if plan != nil {
+		keep := visible[:0]
+		for _, i := range visible {
+			switch strings.ToLower(res.Columns[i].Name) {
+			case "id", "parent", "notused":
+				continue
+			}
+			keep = append(keep, i)
+		}
+		visible = keep
+	}
 	columns := make([]ui.TableColumn, 0, len(visible)+1)
 	columns = append(columns, ui.TableColumn{Title: "#", RowHeader: true, Fixed: true, Width: 44})
 	// A dirty working copy is not re-read to sort, so its headers are not
@@ -549,7 +563,12 @@ func (app *App) renderTable(c *ui.Context, t *ui.Theme) {
 		// grid shows one line of the value, the editor shows it in full. The
 		// framework leaves the row's own double click alone here.
 		cell := ui.Box(c).FillWidth().Children(func() {
-			ui.Text(c, v.String()).SingleLine()
+			text := v.String()
+			// 计划的 detail 列带树形缩进：这一行在树里的位置由前缀说出来。
+			if plan != nil && strings.EqualFold(res.Columns[d].Name, "detail") {
+				text = plan.indent(start+row) + text
+			}
+			ui.Text(c, text).SingleLine()
 		})
 		if cell.RowDoubleClicked() {
 			app.openCell(row, col)
