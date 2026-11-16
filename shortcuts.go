@@ -39,6 +39,7 @@ var workbenchShortcuts = []shortcutRow{
 	{menu: "Workbench", action: "Close console", keys: "CmdOrCtrl+Shift+W"},
 	{menu: "Workbench", action: "Next console", keys: "CmdOrCtrl+Tab"},
 	{menu: "Workbench", action: "Undo working-copy edit", keys: "CmdOrCtrl+Z"},
+	{menu: "Workbench", action: "Exit edit mode", keys: "Escape"},
 	{menu: "Workbench", action: "Refresh result", keys: "F5"},
 	{menu: "Workbench", action: "Fullscreen", keys: "F11"},
 	{menu: "Workbench", action: "Previous page", keys: "Alt+Left"},

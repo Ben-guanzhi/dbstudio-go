@@ -176,18 +176,6 @@ func (c *Cached) TableNames(schema string) []string {
 	return out
 }
 
-// TableComment returns the comment the driver gave a table, if any.
-func (c *Cached) TableComment(schema, table string) string {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	for _, t := range c.meta.tables[schema] {
-		if t.Name == table {
-			return t.Comment
-		}
-	}
-	return ""
-}
-
 // tableKey identifies a table for the columns cache.
 func tableKey(schema, table string) string { return schema + "\x00" + table }
 
@@ -202,34 +190,6 @@ type Cached struct {
 
 func newCached(db *DB) *Cached {
 	return &Cached{db: db, meta: newMeta()}
-}
-
-// setSchema loads and keeps the tables of one schema. It runs off the UI
-// thread; the results reach the UI through the store.
-func (c *Cached) setSchema(ctx context.Context, schema string) error {
-	if c.db == nil || c.db.SQL == nil {
-		return fmt.Errorf("not connected")
-	}
-	if schema == "" {
-		schemas, err := c.db.SQL.ListSchemas(ctx)
-		if err != nil {
-			return err
-		}
-		if len(schemas) == 0 {
-			return fmt.Errorf("no schemas")
-		}
-		schema = schemas[0].Name
-	}
-	tables, err := c.db.SQL.ListTables(ctx, schema)
-	if err != nil {
-		return err
-	}
-	sort.Slice(tables, func(i, j int) bool { return tables[i].Name < tables[j].Name })
-	c.mu.Lock()
-	c.schema = schema
-	c.meta.tables[schema] = tables
-	c.mu.Unlock()
-	return nil
 }
 
 // setTables loads the tables of a schema (used when a schema opens).
@@ -266,12 +226,6 @@ func (c *Cached) setColumns(ctx context.Context, schema, table string) error {
 
 // --- reads used by the UI --------------------------------------------------
 
-func (c *Cached) schemaList() []dbcore.SchemaInfo {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return append([]dbcore.SchemaInfo(nil), c.meta.schemas...)
-}
-
 func (c *Cached) currentSchema() string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -282,20 +236,6 @@ func (c *Cached) currentTable() string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.table
-}
-
-func (c *Cached) hasTables(schema string) bool {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	_, ok := c.meta.tables[schema]
-	return ok
-}
-
-func (c *Cached) hasColumns(schema, table string) bool {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	_, ok := c.meta.columns[tableKey(schema, table)]
-	return ok
 }
 
 func (c *Cached) tablesOf(schema string) []dbcore.TableInfo {
@@ -324,12 +264,4 @@ func (c *Cached) LoadSchemas(ctx context.Context) error {
 	c.meta.schemas = schemas
 	c.mu.Unlock()
 	return nil
-}
-
-// IsKV reports whether the connection is a key-value store rather than SQL.
-func (c *Cached) IsKV() bool {
-	if c == nil || c.db == nil {
-		return false
-	}
-	return c.db.KV != nil
 }

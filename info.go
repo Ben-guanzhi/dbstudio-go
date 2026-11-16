@@ -161,9 +161,3 @@ func (app *App) connInfoView(c *ui.Context) {
 			})
 	})
 }
-
-// openConnInfoFromHealthDot is the health dot's menu: the same panel, reachable
-// where the user already looks when a connection misbehaves.
-func (app *App) openConnInfoFromHealthDot(c *ui.Context) {
-	app.openConnInfo()
-}

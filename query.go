@@ -785,17 +785,6 @@ func (app *App) fetchBrowse(n treeNode) {
 	}()
 }
 
-// compactRows drops the holes left by deleted rows.
-func compactRows(rows [][]string) [][]string {
-	out := rows[:0]
-	for _, r := range rows {
-		if r != nil {
-			out = append(out, r)
-		}
-	}
-	return out
-}
-
 // deleteConn asks before removing the selected connection.
 func (app *App) deleteConn(c *ui.Context) {
 	if app.connName == "" {

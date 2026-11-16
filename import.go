@@ -54,13 +54,6 @@ const (
 	sepTab
 )
 
-func (s importSep) name() string {
-	if s == sepTab {
-		return "TSV (tab)"
-	}
-	return "CSV (comma)"
-}
-
 // sepFor guesses the separator from a file's extension. Anything not .tsv (or
 // .tab) is a comma file, which is what a ".txt" dump usually is.
 func sepFor(path string) importSep {
@@ -168,25 +161,9 @@ func (f *importFile) DataRows(hasHeader bool) [][]string {
 	return f.records
 }
 
-// Preview returns the first n records, for the modal's read-only grid.
-func (f *importFile) Preview(n int) [][]string {
-	if len(f.records) <= n {
-		return f.records
-	}
-	return f.records[:n]
-}
-
 // importMapping is one file column's assignment: a table column's index, or -1
 // to skip it.
 type importMapping []int
-
-// Target returns the table column index file column i maps to, -1 for skip.
-func (m importMapping) Target(i int) int {
-	if i < 0 || i >= len(m) {
-		return -1
-	}
-	return m[i]
-}
 
 // mappedColumns are the table columns the mapping fills, in mapping order.
 func (m importMapping) Mapped() []int {

@@ -51,6 +51,10 @@ func (app *App) view(c *ui.Context) {
 	if c.Shortcut(0, ui.KeyF11) && app.win != nil {
 		app.win.ToggleFullScreen()
 	}
+	// Esc 退出编辑模式（DataGrip 的标准操作）：工作副本被清掉，回到只读。
+	if c.Shortcut(0, ui.KeyEscape) && app.edit.active {
+		app.stopEdit()
+	}
 	// Alt+Left and Alt+Right walk the results pager wherever the focus is;
 	// the editor on Windows and Linux leaves those keys to the window.
 	app.pagerShortcuts(c)

@@ -19,7 +19,6 @@ package main
 //     borrow. Selecting "(all schemas)" reopens with the connection's own value.
 
 import (
-	"strings"
 
 	"github.com/Ben-guanzhi/dbcore"
 	"github.com/egoist/mygo/ui"
@@ -137,12 +136,6 @@ func (app *App) schemaSelector(c *ui.Context) {
 			app.setActiveSchema(name)
 		}
 	})
-}
-
-// schemaMatches reports whether a namespace name is the working schema, or
-// whether no schema is chosen (so everything matches).
-func (app *App) schemaMatches(name string) bool {
-	return app.schema == "" || strings.EqualFold(app.schema, name)
 }
 
 // alignOf is a column's text alignment from its SQL type: numbers to the right,

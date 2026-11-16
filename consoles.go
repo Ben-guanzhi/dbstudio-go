@@ -216,14 +216,3 @@ func (app *App) consolesView(c *ui.Context) {
 			TextColor(t.TextMuted).FontSize(10).SingleLine()
 	})
 }
-
-// consoleOfLabel finds a tab by the label a history entry or a browse fill
-// named, for callers that re-target a console rather than the current one.
-func (app *App) consoleOfLabel(label string) (*consoleTab, bool) {
-	for i := range app.consoles {
-		if app.consoles[i].label == label {
-			return &app.consoles[i], true
-		}
-	}
-	return nil, false
-}

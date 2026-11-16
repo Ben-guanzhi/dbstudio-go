@@ -229,20 +229,6 @@ func (app *App) setTab(i int) {
 	app.showTab(app.tabs[i])
 }
 
-// startRun drops the previous run's tabs, keeps the browses, and opens a new
-// tab for a statement. It returns the tab, ready to be filled by the run.
-func (app *App) startRun(label, sql string) *resTab {
-	app.saveTab()
-	app.dropRuns()
-	t := newTab(label, tabRun)
-	t.sql = sql
-	app.tabs = append(app.tabs, t)
-	app.tabSel = len(app.tabs) - 1
-	app.loadTab(t)
-	app.invalidate()
-	return t
-}
-
 // startRunSQL opens one tab per statement of a script, and chooses the last.
 func (app *App) startRunSQL(stmts []string) []*resTab {
 	app.saveTab()

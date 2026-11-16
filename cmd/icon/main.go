@@ -182,24 +182,6 @@ func mix(a, b color.RGBA, t float32) color.RGBA {
 	}
 }
 
-// roundRect fills an antialiased rounded rectangle via a coverage test per
-// pixel. The icon is generated once, so the plain loop is the right cost.
-func roundRect(img *image.RGBA, x0, y0, x1, y1 int, r float32, c color.RGBA) {
-	bounds := img.Bounds()
-	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-		for x := bounds.Min.X; x < bounds.Max.X; x++ {
-			if x < x0 || x >= x1 || y < y0 || y >= y1 {
-				continue
-			}
-			a := coverage(x, y, float32(x0), float32(y0), float32(x1), float32(y1), r)
-			if a <= 0 {
-				continue
-			}
-			blendPixel(img, x, y, c, a)
-		}
-	}
-}
-
 // coverage is how much of the pixel (x,y) sits inside the rounded rect, 0..1.
 func coverage(px, py int, x0, y0, x1, y1, r float32) float32 {
 	const ss = 3 // 3×3 supersampling

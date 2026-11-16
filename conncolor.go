@@ -94,12 +94,3 @@ func connectionMark(c Conn) string {
 	}
 	return mark
 }
-
-// connInk is a connection's colour for a row's text, or the theme's own text
-// colour when it has none.
-func connInk(c Conn, t *ui.Theme) ui.Color {
-	if ink, ok := colorInk(c.Color); ok {
-		return ink
-	}
-	return t.Text
-}
