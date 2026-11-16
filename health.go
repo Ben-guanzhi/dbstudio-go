@@ -35,13 +35,17 @@ func (app *App) pingOnce() {
 		return
 	}
 	db := app.db
+	app.healthMu.Lock()
 	app.healthGen++
 	gen := app.healthGen
+	app.healthMu.Unlock()
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), pingTimeout)
 		defer cancel()
 		err := db.Driver.Ping(ctx)
 		app.post(func() {
+			app.healthMu.Lock()
+			defer app.healthMu.Unlock()
 			if gen != app.healthGen || app.db != db {
 				return // a newer probe, or another connection, owns the dot
 			}
@@ -70,9 +74,24 @@ func (app *App) pingLoop(stop <-chan struct{}) {
 	}
 }
 
+// healthState 是 health/healthGen 的带锁读（渲染与测试用）。
+func (app *App) healthState() (string, uint64) {
+	app.healthMu.Lock()
+	defer app.healthMu.Unlock()
+	return app.health, app.healthGen
+}
+
+// setHealthState 是带锁写（测试直接构造状态用）。
+func (app *App) setHealthState(h string, gen uint64) {
+	app.healthMu.Lock()
+	defer app.healthMu.Unlock()
+	app.health, app.healthGen = h, gen
+}
+
 // healthLabel is the dot's tooltip and the word beside it.
 func (app *App) healthLabel() string {
-	switch app.health {
+	h, _ := app.healthState()
+	switch h {
 	case "ok":
 		return "Connected"
 	case "down":

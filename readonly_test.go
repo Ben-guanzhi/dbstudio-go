@@ -242,7 +242,7 @@ func TestConnectionMarkRenders(t *testing.T) {
 	app.open = true
 	app.conn = Conn{Name: "prod", Kind: "mysql", Color: "red", ReadOnly: true}
 	app.connName = "prod"
-	app.health = "ok"
+	app.setHealthState("ok", 0)
 
 	bar := ui.NewTester(app.statusBar, 1200, 32)
 	if !bar.HasText(connDot + " prod 🔒") {

@@ -121,23 +121,23 @@ func TestIncrementalBrowseAppends(t *testing.T) {
 		t.Fatalf("BrowseRows: %v", err)
 	}
 	tab.result = &dbcore.QueryResult{Columns: res.Columns, Rows: res.Rows}
-	tab.pagesLoaded = 1
+	tab.setBrowseState(1, true)
 	tab.moreRows = true
 	app.result = tab.result
 
 	// The reader is at the top: nothing is fetched.
 	app.lastDrawnRow = 0
 	app.maybeLoadMore()
-	if tab.pagesLoaded != 1 {
-		t.Fatalf("a segment was fetched at the top of the grid (%d pages)", tab.pagesLoaded)
+	if pages, _ := tab.browseState(); pages != 1 {
+		t.Fatalf("a segment was fetched at the top of the grid (%d pages)", pages)
 	}
 
 	// Near the end of the loaded rows, the next segment is asked for.
 	app.lastDrawnRow = 40
 	app.maybeLoadMore()
-	waitBrowse(t, tab)
-	if tab.pagesLoaded != 2 {
-		t.Fatalf("pages loaded = %d, want 2", tab.pagesLoaded)
+	waitBrowse(t, app, tab)
+	if pages, _ := tab.browseState(); pages != 2 {
+		t.Fatalf("pages loaded = %d, want 2", pages)
 	}
 	if len(tab.result.Rows) != 100 {
 		t.Fatalf("rows = %d, want 100", len(tab.result.Rows))
@@ -154,23 +154,23 @@ func TestIncrementalBrowseStopsAtEnd(t *testing.T) {
 	app, tab := browseTabApp(t, d, 40)
 	res, _ := app.db.SQL.BrowseRows(context.Background(), "", "big", &dbcore.TableRowsRequest{Page: 1, PageSize: 40})
 	tab.result = &dbcore.QueryResult{Columns: res.Columns, Rows: res.Rows}
-	tab.pagesLoaded = 1
+	tab.setBrowseState(1, true)
 	tab.moreRows = true
 	app.result = tab.result
 
 	app.lastDrawnRow = 39
 	app.maybeLoadMore()
-	waitBrowse(t, tab)
+	waitBrowse(t, app, tab)
 	if len(tab.result.Rows) != 60 {
 		t.Fatalf("rows = %d, want 60", len(tab.result.Rows))
 	}
-	if tab.moreRows {
+	if _, more := tab.browseState(); more {
 		t.Fatal("a short segment said there was more")
 	}
 	// And another ask does nothing.
 	asked := len(d.asked)
 	app.maybeLoadMore()
-	waitBrowse(t, tab)
+	waitBrowse(t, app, tab)
 	if len(d.asked) != asked {
 		t.Fatalf("the exhausted table was asked again (%d asks)", len(d.asked))
 	}
@@ -183,7 +183,7 @@ func TestIncrementalBrowseStopsOnDirtyCopy(t *testing.T) {
 	app, tab := browseTabApp(t, d, 50)
 	res, _ := app.db.SQL.BrowseRows(context.Background(), "", "big", &dbcore.TableRowsRequest{Page: 1, PageSize: 50})
 	tab.result = &dbcore.QueryResult{Columns: res.Columns, Rows: res.Rows}
-	tab.pagesLoaded = 1
+	tab.setBrowseState(1, true)
 	tab.moreRows = true
 	app.result = tab.result
 	// A working copy with a real edit in it: dirty() compares the text, so the
@@ -197,10 +197,10 @@ func TestIncrementalBrowseStopsOnDirtyCopy(t *testing.T) {
 
 	app.lastDrawnRow = 49
 	app.maybeLoadMore()
-	if tab.pagesLoaded != 1 {
-		t.Fatalf("a segment was fetched while the copy was dirty (%d pages)", tab.pagesLoaded)
+	if pages, _ := tab.browseState(); pages != 1 {
+		t.Fatalf("a segment was fetched while the copy was dirty (%d pages)", pages)
 	}
-	if tab.moreRows {
+	if _, more := tab.browseState(); more {
 		t.Fatal("loading was not stopped for the dirty copy")
 	}
 }
@@ -211,14 +211,14 @@ func TestIncrementalBrowseFailure(t *testing.T) {
 	app, tab := browseTabApp(t, d, 50)
 	res, _ := app.db.SQL.BrowseRows(context.Background(), "", "big", &dbcore.TableRowsRequest{Page: 1, PageSize: 50})
 	tab.result = &dbcore.QueryResult{Columns: res.Columns, Rows: res.Rows}
-	tab.pagesLoaded = 1
+	tab.setBrowseState(1, true)
 	tab.moreRows = true
 	app.result = tab.result
 
 	app.lastDrawnRow = 49
 	app.maybeLoadMore()
-	waitBrowse(t, tab)
-	if tab.moreRows {
+	waitBrowse(t, app, tab)
+	if _, more := tab.browseState(); more {
 		t.Fatal("a failed segment left loading on")
 	}
 	if app.errMsg == "" {
@@ -235,7 +235,7 @@ func TestIncrementalBrowseCap(t *testing.T) {
 	app, tab := browseTabApp(t, d, 1000)
 	res, _ := app.db.SQL.BrowseRows(context.Background(), "", "big", &dbcore.TableRowsRequest{Page: 1, PageSize: 1000})
 	tab.result = &dbcore.QueryResult{Columns: res.Columns, Rows: res.Rows}
-	tab.pagesLoaded = 1
+	tab.setBrowseState(1, true)
 	tab.moreRows = true
 	app.result = tab.result
 	// Pretend the cap is nearly reached.
@@ -243,7 +243,7 @@ func TestIncrementalBrowseCap(t *testing.T) {
 
 	app.lastDrawnRow = len(tab.result.Rows) - 1
 	app.maybeLoadMore()
-	if tab.moreRows {
+	if _, more := tab.browseState(); more {
 		t.Fatal("loading continued past the cap")
 	}
 	if app.status == "" {
@@ -252,10 +252,12 @@ func TestIncrementalBrowseCap(t *testing.T) {
 }
 
 // waitBrowse waits for the segment fetch to land.
-func waitBrowse(t *testing.T, tab *resTab) {
+func waitBrowse(t *testing.T, app *App, tab *resTab) {
 	t.Helper()
 	for i := 0; i < 400; i++ {
-		if !tab.loadingMore {
+		app.post(func() {}) // 排空 post 队列（headless 下 inline）：回调的写先行于读
+		if !tab.loadingMoreNow() {
+			app.post(func() {})
 			return
 		}
 		time.Sleep(2 * time.Millisecond)

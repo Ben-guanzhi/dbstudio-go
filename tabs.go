@@ -18,6 +18,7 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/Ben-guanzhi/dbcore"
@@ -58,10 +59,14 @@ type resTab struct {
 	// pagesLoaded, fetchSize and moreRows are the incremental browse: how many
 	// segments of the table have been read, how big a segment is, and whether
 	// the table has more. loadingMore is a segment in flight.
-	pagesLoaded int
-	fetchSize   int
-	moreRows    bool
+	fetchSize int
+	// 浏览分段状态经 loadingMu 读写：segment 的回调（app.post）与渲染/测试
+	// 并发（-race 抓到过）。访问走 setLoadingMore / loadingMoreNow /
+	// browseState / setBrowseState。
+	loadingMu   sync.Mutex
 	loadingMore bool
+	pagesLoaded int
+	moreRows    bool
 
 	// colOrder and colHidden are the tab's arrangement of its columns: the order
 	// the user put them in, and the ones hidden from view. They are per tab
@@ -309,4 +314,32 @@ func (app *App) tabLabels() []string {
 		out[i] = label
 	}
 	return out
+}
+
+// setLoadingMore 是 loadingMore 的带锁写。
+func (t *resTab) setLoadingMore(v bool) {
+	t.loadingMu.Lock()
+	defer t.loadingMu.Unlock()
+	t.loadingMore = v
+}
+
+// loadingMoreNow 是 loadingMore 的带锁读。
+func (t *resTab) loadingMoreNow() bool {
+	t.loadingMu.Lock()
+	defer t.loadingMu.Unlock()
+	return t.loadingMore
+}
+
+// browseState 是 pagesLoaded / moreRows 的带锁读。
+func (t *resTab) browseState() (pages int, more bool) {
+	t.loadingMu.Lock()
+	defer t.loadingMu.Unlock()
+	return t.pagesLoaded, t.moreRows
+}
+
+// setBrowseState 是 pagesLoaded / moreRows 的带锁写（测试构造用）。
+func (t *resTab) setBrowseState(pages int, more bool) {
+	t.loadingMu.Lock()
+	defer t.loadingMu.Unlock()
+	t.pagesLoaded, t.moreRows = pages, more
 }

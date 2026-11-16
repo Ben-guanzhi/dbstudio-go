@@ -7,6 +7,7 @@ package main
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/Ben-guanzhi/dbcore"
@@ -44,6 +45,9 @@ type App struct {
 	// The connection's health (#26): the last probe's verdict and when it ran,
 	// with a generation so a slow ping cannot overrule a newer one. Checking is
 	// a toolbar indicator; it never blocks a statement.
+	// 读写经 healthMu：headless（测试）时 app.post 直接执行，probe 的回调与
+	// 主 goroutine 并发（-race 抓到过）。
+	healthMu  sync.Mutex
 	health    string // "" unknown, "ok", "down"
 	healthGen uint64
 
@@ -73,6 +77,9 @@ type App struct {
 	// rowEst caches each table's row estimate for the pager, misses included;
 	// savedWidths is the column widths the session last wrote, so a resize is
 	// noticed once rather than every frame.
+	// rowEst 的读写一律经 estimateMu：headless（测试）时 app.post 直接执行，
+	// 异步回调会与主 goroutine 的读并发（-race 抓到过）。
+	estimateMu  sync.Mutex
 	rowEst      map[string]rowEstimate
 	savedWidths map[string]float32
 

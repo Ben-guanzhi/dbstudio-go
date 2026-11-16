@@ -37,7 +37,9 @@ func (d *multiFakeDriver) ExecuteMulti(context.Context, string, ...dbcore.Value)
 func waitRun(t *testing.T, app *App) {
 	t.Helper()
 	for i := 0; i < 400; i++ {
+		app.post(func() {}) // 排空 post 队列（headless 下 inline）：busy 的写先行于读
 		if !app.busy {
+			app.post(func() {}) // busy 翻 false 的那次 post 也排掉
 			return
 		}
 		time.Sleep(2 * time.Millisecond)

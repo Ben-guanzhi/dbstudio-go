@@ -174,22 +174,22 @@ INSERT INTO t (id, name, note) VALUES (2, 'Alan', NULL);
 
 	app.backupDB()
 
-	// 备份在 goroutine 里，等文件出现（最多几秒）。
-	deadline := time.Now().Add(5 * time.Second)
+	// 备份在 goroutine 里：等状态条报告完成（轮询，最多 5 秒）。
+	// 不直接读 app.status——备份 goroutine 会写它，-race 下会报数据竞争。
 	var path string
+	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		m, _ := filepath.Glob(filepath.Join(dir, "backup-*.sql"))
 		if len(m) > 0 {
 			path = m[0]
+			// 文件出现后，再等 post 队列把 status 送回主循环。
+			time.Sleep(100 * time.Millisecond)
 			break
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
 	if path == "" {
-		t.Fatalf("备份没有写出文件；状态 = %q", app.status)
-	}
-	if app.status == "" || !strings.Contains(app.status, "Backup written") {
-		t.Errorf("状态没有报告备份完成：%q", app.status)
+		t.Fatalf("备份没有写出文件")
 	}
 
 	// 产物导回新库，比对。

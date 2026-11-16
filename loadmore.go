@@ -42,7 +42,7 @@ const loadAhead = 25
 // running, or when the grid holds uncommitted edits.
 func (app *App) loadMoreRows() {
 	t := app.tab()
-	if t == nil || t.kind != tabBrowse || t.node.label == "" || t.loadingMore {
+	if t == nil || t.kind != tabBrowse || t.node.label == "" || t.loadingMoreNow() {
 		return
 	}
 	if !app.open || app.db == nil || app.db.SQL == nil || app.busy {
@@ -66,7 +66,7 @@ func (app *App) loadMoreRows() {
 		return
 	}
 
-	t.loadingMore = true
+	t.setLoadingMore(true)
 	app.beginBusy("loadmore")
 	app.invalidate()
 
@@ -97,13 +97,14 @@ func (app *App) loadMoreRows() {
 			Filter:   filter,
 		})
 		app.post(func() {
-			t.loadingMore = false
+			defer t.setLoadingMore(false) // 完成信号放最后：waitBrowse 等它，回调里的状态写入才先行
 			app.endBusy("loadmore")
 			if app.tab() != t {
 				return // the reader moved on
 			}
 			if err != nil {
-				t.moreRows = false
+				pages, _ := t.browseState()
+				t.setBrowseState(pages, false)
 				app.errMsg = "Loading more rows failed: " + err.Error()
 				app.invalidate()
 				return
@@ -120,24 +121,28 @@ func (app *App) appendBrowseRows(t *resTab, res *dbcore.TableRowsResult, size in
 		return
 	}
 	if len(res.Rows) == 0 {
-		t.moreRows = false // the table ended between one segment and the next
+		pages, _ := t.browseState()
+		t.setBrowseState(pages, false) // the table ended between one segment and the next
 		app.status = "No more rows"
 		app.invalidate()
 		return
 	}
 	t.result.Rows = append(t.result.Rows, res.Rows...)
-	t.pagesLoaded++
+	pages, _ := t.browseState()
+	pages++
 	t.pager.more = len(res.Rows) >= size && !res.TotalFound
+	more := false
 	if res.TotalFound {
 		t.pager.total = int(res.Total)
-		t.moreRows = len(t.result.Rows) < int(res.Total)
+		more = len(t.result.Rows) < int(res.Total)
 	} else {
-		t.moreRows = len(res.Rows) >= size
+		more = len(res.Rows) >= size
 	}
 	if len(t.result.Rows) >= rowsLoadedMax {
-		t.moreRows = false
+		more = false
 		app.status = "Stopped at 50,000 rows — use the query editor for the rest"
 	}
+	t.setBrowseState(pages, more)
 	if app.pager.total >= 0 {
 		app.status = statusPageText(t.table, 1, app.pager.total, len(t.result.Rows))
 	} else {
@@ -159,7 +164,7 @@ func (app *App) appendBrowseRows(t *resTab, res *dbcore.TableRowsResult, size in
 // builds the rows in view, so the largest one seen is how far down the page is.
 func (app *App) maybeLoadMore() {
 	t := app.tab()
-	if t == nil || t.kind != tabBrowse || !t.moreRows || t.loadingMore {
+	if t == nil || t.kind != tabBrowse || !t.moreRows || t.loadingMoreNow() {
 		return
 	}
 	if app.result == nil {

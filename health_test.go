@@ -103,19 +103,19 @@ func TestPingOnceSetsHealth(t *testing.T) {
 	}
 	t.Cleanup(func() { db.Close() })
 	app := &App{db: db, conn: Conn{Kind: "sqlite"}, open: true}
-	if app.health != "" {
-		t.Fatalf("health starts %q, want empty (unchecked)", app.health)
+	if h, _ := app.healthState(); h != "" {
+		t.Fatalf("health starts %q, want empty (unchecked)", h)
 	}
 	app.pingOnce()
 	// The probe runs in its own goroutine (even headless, where post runs
 	// inline), so wait for its verdict with a bounded poll.
 	deadline := 200
-	for app.health == "" && deadline > 0 {
+	for h, _ := app.healthState(); h == "" && deadline > 0; h, _ = app.healthState() {
 		time.Sleep(5 * time.Millisecond)
 		deadline--
 	}
-	if app.health != "ok" {
-		t.Fatalf("health = %q, want ok", app.health)
+	if h, _ := app.healthState(); h != "ok" {
+		t.Fatalf("health = %q, want ok", h)
 	}
 }
 
@@ -123,8 +123,8 @@ func TestPingOnceSetsHealth(t *testing.T) {
 func TestPingOnceSkipsClosed(t *testing.T) {
 	app := &App{}
 	app.pingOnce()
-	if app.healthGen != 0 {
-		t.Fatalf("a closed connection was probed: gen=%d", app.healthGen)
+	if _, g := app.healthState(); g != 0 {
+		t.Fatalf("a closed connection was probed: gen=%d", g)
 	}
 }
 
@@ -132,7 +132,8 @@ func TestPingOnceSkipsClosed(t *testing.T) {
 func TestHealthLabel(t *testing.T) {
 	cases := map[string]string{"": "Not checked", "ok": "Connected", "down": "Connection lost"}
 	for state, want := range cases {
-		app := &App{health: state}
+		app := &App{}
+		app.setHealthState(state, 0)
 		if got := app.healthLabel(); got != want {
 			t.Errorf("healthLabel(%q) = %q, want %q", state, got, want)
 		}
@@ -153,19 +154,19 @@ func TestPingGenerationGuard(t *testing.T) {
 
 	// Simulate: a probe of connection A is in flight, then the user reconnects
 	// (gen moves) and another probe answers.
-	app.healthGen++
-	staleGen := app.healthGen
-	app.healthGen++ // the reconnect
-	if staleGen == app.healthGen {
+	app.setHealthState("", 1)
+	staleGen := uint64(1)
+	app.setHealthState("", 2) // the reconnect
+	if staleGen == 2 {
 		t.Fatal("the generation did not move")
 	}
 	// The guard is what the probe's post does: gen != healthGen means drop.
-	app.health = "ok"
-	if staleGen == app.healthGen {
+	app.setHealthState("ok", 2)
+	if staleGen == 2 {
 		t.Fatal("unreachable")
 	}
-	if app.health != "ok" {
-		t.Fatalf("health = %q", app.health)
+	if h, _ := app.healthState(); h != "ok" {
+		t.Fatalf("health = %q", h)
 	}
 }
 

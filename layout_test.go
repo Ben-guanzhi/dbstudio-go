@@ -145,7 +145,7 @@ func TestToolbarIsActionsOnly(t *testing.T) {
 	app := newViewApp(t, nil)
 	app.open = true
 	app.conn = Conn{Name: "c", Kind: "sqlite"}
-	app.health = "ok"
+	app.setHealthState("ok", 0)
 	tt := ui.NewTester(app.toolbar, 1600, 40)
 	for _, want := range []string{"Run", "Run Selection", "Run to Caret", "Clear", "Refresh", "Export", "History"} {
 		if !tt.HasText(want) {

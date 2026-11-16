@@ -7,6 +7,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -17,9 +18,11 @@ import (
 // --- row estimates ----------------------------------------------------------
 
 // estDriver answers the estimate the test wants, and counts the questions.
+// asked 是原子的：EstimatedRows 会被异步 goroutine 调（-race 抓过非原子计数）。
 type estDriver struct {
 	rows  int64
 	known bool
+	mu    sync.Mutex
 	asked int
 }
 
@@ -29,8 +32,17 @@ func (d *estDriver) Close() error                    { return nil }
 func (d *estDriver) AsSQL() (dbcore.SQLDriver, bool) { return nil, false }
 func (d *estDriver) AsKV() (dbcore.KVDriver, bool)   { return nil, false }
 func (d *estDriver) EstimatedRows(context.Context, string, string) (int64, bool, bool, error) {
+	d.mu.Lock()
 	d.asked++
+	d.mu.Unlock()
 	return d.rows, true, d.known, nil
+}
+
+// asks 返回被问的次数（原子的读侧）。
+func (d *estDriver) asks() int {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.asked
 }
 
 // A browse of a table the catalog has an estimate for shows it, and asks the
@@ -65,8 +77,8 @@ func TestEstimateFromDriver(t *testing.T) {
 		time.Sleep(5 * time.Millisecond)
 		deadline--
 	}
-	if d.asked != 1 {
-		t.Fatalf("the driver was asked %d time(s), want 1", d.asked)
+	if d.asks() != 1 {
+		t.Fatalf("the driver was asked %d time(s), want 1", d.asks())
 	}
 	rows, ok := app.estimateOf("main", "huge")
 	if !ok || rows != 4_500_000 {
@@ -74,8 +86,8 @@ func TestEstimateFromDriver(t *testing.T) {
 	}
 	// Asking again does not ask the driver again.
 	app.requestEstimate("main", "huge")
-	if d.asked != 1 {
-		t.Fatalf("the cached estimate was asked for again (%d asks)", d.asked)
+	if d.asks() != 1 {
+		t.Fatalf("the cached estimate was asked for again (%d asks)", d.asks())
 	}
 }
 
@@ -90,8 +102,8 @@ func TestEstimateUnknownStaysUnknown(t *testing.T) {
 	for i := 0; i < 50; i++ {
 		app.requestEstimate("main", "view")
 	}
-	if d.asked > 1 {
-		t.Fatalf("an unknown estimate was asked %d times", d.asked)
+	if d.asks() > 1 {
+		t.Fatalf("an unknown estimate was asked %d times", d.asks())
 	}
 	tab := newTab("view", tabBrowse)
 	tab.schema, tab.table = "main", "view"

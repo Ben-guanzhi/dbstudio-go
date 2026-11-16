@@ -34,6 +34,8 @@ func estimateKey(schema, table string) string { return schema + "\x00" + table }
 
 // estimateOf returns the cached estimate for a table.
 func (app *App) estimateOf(schema, table string) (int64, bool) {
+	app.estimateMu.Lock()
+	defer app.estimateMu.Unlock()
 	e, ok := app.rowEst[schema+"\x00"+table]
 	if !ok || !e.known {
 		return 0, false
@@ -49,7 +51,10 @@ func (app *App) requestEstimate(schema, table string) {
 		return
 	}
 	key := estimateKey(schema, table)
-	if _, seen := app.rowEst[key]; seen {
+	app.estimateMu.Lock()
+	_, seen := app.rowEst[key]
+	app.estimateMu.Unlock()
+	if seen {
 		return // asked already (a miss is an answer)
 	}
 	// The table list's estimate is free to read.
@@ -89,6 +94,8 @@ func (app *App) requestEstimate(schema, table string) {
 
 // putEstimate records an estimate.
 func (app *App) putEstimate(key string, e rowEstimate) {
+	app.estimateMu.Lock()
+	defer app.estimateMu.Unlock()
 	if app.rowEst == nil {
 		app.rowEst = map[string]rowEstimate{}
 	}

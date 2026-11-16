@@ -505,11 +505,11 @@ func (app *App) incrementalBar(c *ui.Context, t *ui.Theme) {
 	ui.Row(c).Gap(6).Padding(4, 8).BorderWidth(0, 0, 1, 0).BorderColor(t.Border).Children(func() {
 		ui.Text(c, label).FontSize(10).TextColor(t.TextMuted).SingleLine()
 		ui.Spacer(c)
-		if tab != nil && (tab.loadingMore || app.busy) {
+		if tab != nil && (tab.loadingMoreNow() || app.busy) {
 			ui.Spinner(c)
 		}
 		more := tab != nil && tab.moreRows
-		if ui.Button(c, "Load More").Disabled(!more || tab != nil && tab.loadingMore || app.busy).
+		if ui.Button(c, "Load More").Disabled(!more || tab != nil && tab.loadingMoreNow() || app.busy).
 			Tooltip("Fetch the next segment of rows (also loads when you scroll to the end)").
 			Clicked() {
 			app.loadMoreRows()

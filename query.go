@@ -101,8 +101,7 @@ func (app *App) connectIn(name, schema string) {
 			app.txBusy = false
 			app.errMsg = ""
 			app.txIsolation = ""
-			app.health = ""
-			app.healthGen++
+			app.setHealthState("", app.healthGen+1)
 			app.readOnlyOn = conn.ReadOnly
 			app.clearTreeErr()
 			app.status = conn.label()
@@ -146,8 +145,7 @@ func (app *App) disconnect() {
 	app.txBusy = false
 	app.errMsg = ""
 	app.txIsolation = ""
-	app.health = ""
-	app.healthGen++
+	app.setHealthState("", app.healthGen+1)
 	app.treeGen++
 	app.pending = nil
 	app.clearTreeErr()
@@ -766,7 +764,7 @@ func (app *App) fetchBrowse(n treeNode) {
 			t.pagesLoaded = 1
 			t.fetchSize = size
 			t.moreRows = total < 0 && len(res.Rows) >= size || total > len(res.Rows)
-			t.loadingMore = false
+			t.setLoadingMore(false)
 			t.status = statusPageText(table, page, total, len(res.Rows))
 			app.pager = t.pager
 			t.pager.page = app.clampPage()
