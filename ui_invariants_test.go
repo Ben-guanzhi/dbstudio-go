@@ -19,6 +19,40 @@ import (
 	"testing"
 )
 
+// TestNoRowSParenthetical：行数不用 `row(s)` 这种偷懒写法——正确的单复数由
+// pluralRows 给（`1 row` / `3 rows`）。
+//
+// 这是「措辞打磨」的锁：`row(s)` 曾在 15 处出现，靠人眼不可能保持统一。
+func TestNoRowSParenthetical(t *testing.T) {
+	files, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	hits := 0
+	for _, name := range files {
+		if name == "ui_invariants_test.go" {
+			continue // 本文件要在错误信息里提到这种写法
+		}
+		raw, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatalf("读 %s: %v", name, err)
+		}
+		for i, line := range strings.Split(string(raw), "\n") {
+			trimmed := strings.TrimSpace(line)
+			if strings.HasPrefix(trimmed, "//") {
+				continue // 注释里提到写法本身是可以的
+			}
+			if strings.Contains(line, "row(s)") {
+				hits++
+				t.Errorf("%s:%d: 代码里出现 row(s)——改用 pluralRows（正确单复数）", name, i+1)
+			}
+		}
+	}
+	if hits == 0 {
+		t.Log("没有 row(s) 的偷懒写法")
+	}
+}
+
 // shortcutCallRE 匹配 c.Shortcut(修饰键, 键) 的调用。
 var shortcutCallRE = regexp.MustCompile(`c\.Shortcut\(([^,]+),\s*(ui\.Key\w+)\)`)
 

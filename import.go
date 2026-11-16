@@ -444,7 +444,7 @@ func (app *App) runImport() {
 			st.imported = done
 			st.progress = fmt.Sprintf("%d / %d rows", done, total)
 			st.err = ""
-			app.status = fmt.Sprintf("Imported %d row(s) into %s", done, table)
+			app.status = fmt.Sprintf("Imported %s into %s", pluralRows(done),  table)
 			// Re-read the table the import went into, if the grid holds it.
 			if app.edit.active && app.edit.table == table && app.edit.refresh != nil {
 				app.edit.refresh()

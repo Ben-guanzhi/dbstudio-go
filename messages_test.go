@@ -19,7 +19,7 @@ func TestMessageLines(t *testing.T) {
 		LastInsertID: 17,
 	}
 	app := &App{}
-	tb := &resTab{sql: "INSERT INTO employees (name) VALUES ('Ada')", status: "3 row(s) affected, 2ms", result: res}
+	tb := &resTab{sql: "INSERT INTO employees (name) VALUES ('Ada')", status: "3 rows affected, 2ms", result: res}
 
 	lines := app.messageLines(tb)
 	if len(lines) == 0 {
@@ -43,7 +43,7 @@ func TestMessageLines(t *testing.T) {
 		t.Errorf("status %q missing from the lines", tb.status)
 	}
 	// The rows the statement changed, and the id it inserted, are named.
-	if !hasDetail(lines, "3 row(s) affected") || !hasDetail(lines, "Last insert id: 17") {
+	if !hasDetail(lines, "3 rows affected") || !hasDetail(lines, "Last insert id: 17") {
 		t.Errorf("lines = %+v, want the affected count and last insert id", lines)
 	}
 }
@@ -56,7 +56,7 @@ func TestMessageLinesTruncated(t *testing.T) {
 		TotalRows: &total,
 	}
 	lines := (&App{}).messageLines(&resTab{sql: "SELECT * FROM big", result: res})
-	if !hasDetail(lines, "1 row(s) of an estimated 250, truncated") {
+	if !hasDetail(lines, "1 row of an estimated 250, truncated") {
 		t.Errorf("lines = %+v, want the estimated total", lines)
 	}
 }
@@ -88,7 +88,7 @@ func TestMessageLinesNoTabFallsBackToApp(t *testing.T) {
 
 func TestClearMessages(t *testing.T) {
 	app := &App{status: "Query done"}
-	tb := &resTab{status: "3 row(s)", errMsg: "statement 1: boom"}
+	tb := &resTab{status: "3 rows", errMsg: "statement 1: boom"}
 	app.tabs = []*resTab{tb}
 	app.tabSel = 0
 	app.clearMessages()

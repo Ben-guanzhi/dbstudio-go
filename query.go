@@ -521,11 +521,11 @@ func resultStatus(res *dbcore.QueryResult, elapsed time.Duration) string {
 	case res == nil:
 		return "Query done"
 	case res.AffectedRows > 0:
-		return fmt.Sprintf("%d row(s) affected, %s", res.AffectedRows, elapsed.Round(time.Millisecond))
+		return fmt.Sprintf("%s affected, %s", pluralRows(int(res.AffectedRows)), elapsed.Round(time.Millisecond))
 	case res.Truncated:
-		return fmt.Sprintf("%d row(s), truncated, %s", len(res.Rows), elapsed.Round(time.Millisecond))
+		return fmt.Sprintf("%s, truncated, %s", pluralRows(len(res.Rows)), elapsed.Round(time.Millisecond))
 	default:
-		return fmt.Sprintf("%d row(s), %s", len(res.Rows), elapsed.Round(time.Millisecond))
+		return fmt.Sprintf("%s, %s", pluralRows(len(res.Rows)), elapsed.Round(time.Millisecond))
 	}
 }
 

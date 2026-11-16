@@ -319,7 +319,7 @@ func (app *App) copySelected(kind copyKind, rows []int) {
 	if n == 0 {
 		n = len(res.Rows)
 	}
-	app.status = fmt.Sprintf("Copied %d row(s) as %s", n, kind.label())
+	app.status = fmt.Sprintf("Copied %s as %s", pluralRows(n),  kind.label())
 	app.invalidate()
 }
 

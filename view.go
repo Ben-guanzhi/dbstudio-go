@@ -361,7 +361,7 @@ func (app *App) messageLines(tb *resTab) []messageLine {
 		if r := tb.result; r != nil {
 			switch {
 			case r.AffectedRows > 0:
-				out = append(out, messageLine{text: fmt.Sprintf("%d row(s) affected", r.AffectedRows), kind: msgDetail})
+				out = append(out, messageLine{text: fmt.Sprintf("%s affected", pluralRows(int(r.AffectedRows))), kind: msgDetail})
 				if r.LastInsertID > 0 {
 					out = append(out, messageLine{text: fmt.Sprintf("Last insert id: %d", r.LastInsertID), kind: msgDetail})
 				}
@@ -371,9 +371,9 @@ func (app *App) messageLines(tb *resTab) []messageLine {
 			if r.Truncated {
 				shown := len(r.Rows)
 				if r.TotalRows != nil {
-					out = append(out, messageLine{text: fmt.Sprintf("%d row(s) of an estimated %d, truncated", shown, *r.TotalRows), kind: msgDetail})
+					out = append(out, messageLine{text: fmt.Sprintf("%s of an estimated %d, truncated", pluralRows(shown),  *r.TotalRows), kind: msgDetail})
 				} else {
-					out = append(out, messageLine{text: fmt.Sprintf("%d row(s), truncated", shown), kind: msgDetail})
+					out = append(out, messageLine{text: fmt.Sprintf("%s, truncated", pluralRows(shown)), kind: msgDetail})
 				}
 			}
 		}

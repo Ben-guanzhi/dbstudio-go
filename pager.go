@@ -535,7 +535,7 @@ func (app *App) pagerSummary(c *ui.Context, t *ui.Theme) {
 	case app.pager.total >= 0:
 		ui.Textf(c, "Rows %d–%d of %d", abs+1, abs+count, app.pager.total).TextColor(t.TextMuted).SingleLine()
 	default:
-		ui.Textf(c, "%d row(s)", count).TextColor(t.TextMuted).SingleLine()
+		ui.Textf(c, "%s", pluralRows(count)).TextColor(t.TextMuted).SingleLine()
 	}
 	if app.result.Truncated {
 		ui.Text(c, " (truncated)").TextColor(t.TextMuted).SingleLine()
@@ -545,7 +545,7 @@ func (app *App) pagerSummary(c *ui.Context, t *ui.Theme) {
 // statusPageText is the short line the results header shows for a page.
 func statusPageText(table string, page, total, shown int) string {
 	if total >= 0 {
-		return fmt.Sprintf("%s: page %d, %d of %d row(s)", table, page, shown, total)
+		return fmt.Sprintf("%s: page %d, %d of %s", table, page, shown, pluralRows(total))
 	}
-	return fmt.Sprintf("%s: %d row(s)", table, shown)
+	return fmt.Sprintf("%s: %s", table, pluralRows(shown))
 }

@@ -90,7 +90,7 @@ func TestResultsMessagesTab(t *testing.T) {
 	}
 	tb := newTab("Result 1", tabRun)
 	tb.result = res
-	tb.status = "1 row(s)"
+	tb.status = "1 row"
 	tb.elapsed = 1
 	app.tabs = []*resTab{tb}
 	app.tabSel = 0
@@ -111,7 +111,7 @@ func TestResultsMessagesTab(t *testing.T) {
 	// The messages tab: the statement's report replaces the grid.
 	app.resView = 1
 	msgs := ui.NewTester(app.resultsPane, 900, 500)
-	if !msgs.HasText("1 row(s)") {
+	if !msgs.HasText("1 row") {
 		t.Errorf("the messages tab does not report the statement's outcome; texts = %v", msgs.Texts())
 	}
 	if msgs.HasText("id") {

@@ -239,10 +239,10 @@ func TestPagerAbsoluteRowNumbers(t *testing.T) {
 }
 
 func TestPagerStatusText(t *testing.T) {
-	if got := statusPageText("employees", 2, 250, 100); got != "employees: page 2, 100 of 250 row(s)" {
+	if got := statusPageText("employees", 2, 250, 100); got != "employees: page 2, 100 of 250 rows" {
 		t.Fatalf("known total = %q", got)
 	}
-	if got := statusPageText("employees", 1, -1, 100); got != "employees: 100 row(s)" {
+	if got := statusPageText("employees", 1, -1, 100); got != "employees: 100 rows" {
 		t.Fatalf("unknown total = %q", got)
 	}
 }

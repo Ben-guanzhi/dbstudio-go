@@ -48,6 +48,17 @@ func emptyState(c *ui.Context, t *ui.Theme, text string) {
 // invitation to guess; this names the reason and the three gestures that fill it
 // — run, re-read, and look at what ran before — each with the key that does it.
 // The bar and the grid replace it as soon as a statement returns.
+// pluralRows 是行数的正确写法：`1 row` / `3 rows`。
+//
+// 此前全仓写 `row(s)`——一致的约定，但成熟产品不这么说话（DBeaver / TablePlus
+// 都是正确的单复数）。措辞的打磨和空状态同源：靠源码扫描找全，靠替换改齐。
+func pluralRows(n int) string {
+	if n == 1 {
+		return "1 row"
+	}
+	return fmt.Sprintf("%d rows", n)
+}
+
 func (app *App) resultsHint(c *ui.Context, t *ui.Theme) {
 	ui.Column(c).Gap(6).Padding(12, 12).Children(func() {
 		ui.Text(c, "No results yet").FontSize(12).SingleLine()
@@ -203,7 +214,7 @@ func (app *App) statusBar(c *ui.Context) {
 		if app.result != nil {
 			if n := len(app.result.Rows); n > 0 {
 				ui.Text(c, "│").TextColor(t.Border).FontSize(10)
-				label := fmt.Sprintf("%d row(s)", n)
+				label := pluralRows(n)
 				if tt := app.tab(); tt != nil && tt.elapsed > 0 {
 					label += " · " + tt.elapsed.Round(time.Millisecond).String()
 				}
