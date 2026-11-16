@@ -63,8 +63,6 @@ func (app *App) newEditorState(buf *editor.Buffer) *editor.State {
 // and an editor state, so the cap is about the tab bar's usability, not memory.
 const consoleMax = 8
 
-// consoleNew is the label a fresh tab carries until something gives it a name.
-const consoleNew = "New Console"
 
 // initConsoles gives the App its first editor tab, before anything reads edBuf.
 // It runs where main builds the editor state, and a test builds its own.

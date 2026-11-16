@@ -16,14 +16,6 @@ import (
 	"testing"
 )
 
-// a11yContrastPair 是一处"文本色画在背景色上"的硬编码颜色对：dbstudio 的主题
-// 由 mygo 框架托管（本包不定义画布/文字色），本包仅有的颜色决策是连接标记的
-// 五色调色板——它们画在主题背景上，所以要对契约阈值校验。
-type a11yContrastPair struct {
-	name string
-	hex  string
-}
-
 func loadA11yContrastRule(t *testing.T) (minRatio float64, surfaces []string) {
 	t.Helper()
 	raw, err := os.ReadFile(filepath.Join("..", "dbcore", "spec", "a11y-baseline.json"))

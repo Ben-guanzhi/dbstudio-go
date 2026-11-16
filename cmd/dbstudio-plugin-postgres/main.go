@@ -22,8 +22,6 @@ import (
 	"dbstudio-go/internal/pluginsdk"
 )
 
-// pluginVersion rides the banner for diagnostics.
-const pluginVersion = "0.1.0"
 
 // pgHandler is one connection: the plugin process IS the connection, so the
 // handle is opened in Open from argv's spec and lives for the process.

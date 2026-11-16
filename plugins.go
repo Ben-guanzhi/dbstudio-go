@@ -146,11 +146,41 @@ func PluginKinds() []string {
 	return out
 }
 
+// pluginSpec 是传给插件的连接协议：ConnSpec 的**可序列化镜像**。
+//
+// 为什么不用 ConnSpec 直接编码：它的 Dialer 是**函数类型**，encoding/json
+// 对函数（包括 nil）一律报错——`json.Marshal(spec)` 会让**每一次插件连接都
+// 失败**（staticcheck 的 SA1026 抓到的）。插件也不需要 Dialer：隧道在客户端
+// 侧建立，插件拿到的是本地端点。
+//
+// 字段名与 ConnSpec 一致（那边没有 json tag），插件侧解码同一个结构。
+type pluginSpec struct {
+	Name     string            `json:"Name"`
+	Kind     string            `json:"Kind"`
+	Host     string            `json:"Host"`
+	Port     int               `json:"Port"`
+	User     string            `json:"User"`
+	Password string            `json:"Password"`
+	Database string            `json:"Database"`
+	Schema   string            `json:"Schema"`
+	File     string            `json:"File"`
+	SSLMode  string            `json:"SSLMode"`
+	Params   map[string]string `json:"Params,omitempty"`
+}
+
 // jsonMarshalSpec encodes the spec the plugin's argv[1] carries. Field names
-// follow dbcore.ConnSpec's JSON tags, so the plugin side decodes the same
-// struct without a second wire type.
+// follow dbcore.ConnSpec's, so the plugin side decodes the same struct without
+// a second wire type.
 func jsonMarshalSpec(spec dbcore.ConnSpec) (string, error) {
-	b, err := json.Marshal(spec)
+	ps := pluginSpec{
+		Name: spec.Name, Kind: string(spec.Kind),
+		Host: spec.Host, Port: spec.Port,
+		User: spec.User, Password: spec.Password,
+		Database: spec.Database, Schema: spec.Schema,
+		File: spec.File, SSLMode: spec.SSLMode,
+		Params: spec.Params,
+	}
+	b, err := json.Marshal(ps)
 	if err != nil {
 		return "", fmt.Errorf("encode connection spec: %w", err)
 	}

@@ -20,7 +20,6 @@ import (
 type multiFakeDriver struct {
 	sets  []*dbcore.QueryResult
 	calls int
-	tx    *dbcore.TxManager
 }
 
 func (d *multiFakeDriver) Kind() dbcore.DatabaseKind       { return dbcore.KindSQLite }

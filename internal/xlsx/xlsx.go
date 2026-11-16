@@ -26,8 +26,6 @@ import (
 	"unicode/utf8"
 )
 
-// sheetName is the one sheet's name.
-const sheetName = "Sheet1"
 
 // maxCellRunes bounds one cell. Excel's own limit is 32767 characters; a value
 // beyond it is cut rather than letting Excel refuse the file.

@@ -39,8 +39,6 @@ import (
 // reports a useful "row 40,000 of 400,000".
 const importBatchSize = 500
 
-// importPreviewRows is how many raw rows the modal shows before the user maps.
-const importPreviewRows = 8
 
 // importMaxCell is the longest cell text the parser keeps; a CSV cell beyond it
 // is cut, as the grid's own cells are.
