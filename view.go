@@ -47,6 +47,10 @@ func (app *App) view(c *ui.Context) {
 			app.refreshCurrent(c)
 		}
 	}
+	// F11 全屏：沉浸式看数据（DBeaver / TablePlus 的同一颗键）。
+	if c.Shortcut(0, ui.KeyF11) && app.win != nil {
+		app.win.ToggleFullScreen()
+	}
 	// Alt+Left and Alt+Right walk the results pager wherever the focus is;
 	// the editor on Windows and Linux leaves those keys to the window.
 	app.pagerShortcuts(c)

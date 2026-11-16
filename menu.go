@@ -49,6 +49,12 @@ func (app *App) setMenu() {
 			mygo.Separator(),
 			{Label: "Reset Split",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.resetSplit() }},
+			{Label: "Fullscreen", Accelerator: "F11",
+				Click: func(it *mygo.MenuItem, w *mygo.Window) {
+					if app.win != nil {
+						app.win.ToggleFullScreen()
+					}
+				}},
 		}},
 		{Label: "Database", Submenu: []*mygo.MenuItem{
 			{Label: "Connection Info…", Accelerator: "CmdOrCtrl+I",
