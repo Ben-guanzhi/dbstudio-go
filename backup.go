@@ -248,44 +248,72 @@ func restoreSQLFile(ctx context.Context, path, target string) (int, error) {
 // backupDB 把当前连接备份成一个 .sql 文件，写在保存连接的同一目录里（与
 // 导出结果同一个约定位置），名字带时间戳。
 //
-// 目前只支持 SQLite（文件型）：MySQL / PostgreSQL 的备份走它们原生的
-// mysqldump / pg_dump，那是下一步。
+// SQLite 用内置的 .dump 等价导出；MySQL / PostgreSQL 调它们原生的
+// mysqldump / pg_dump（本机没装时明确报错，不静默产出空文件）。
 func (app *App) backupDB() {
-	if !app.open {
+	if !app.open || app.store == nil {
 		app.status = "Not connected"
 		app.invalidate()
 		return
 	}
-	if app.engine() != "sqlite" || app.conn.File == "" {
-		app.status = "Backup: SQLite only for now (MySQL/PostgreSQL use their own dump tools)"
+	dir := app.store.Dir()
+	name := "backup-" + time.Now().Format("20060102-150405") + ".sql"
+	outPath := filepath.Join(dir, name)
+
+	if app.engine() == "sqlite" && app.conn.File != "" {
+		app.status = "Backing up…"
+		app.invalidate()
+		go func() {
+			dump, err := dumpSQLite(context.Background(), app.conn.File)
+			if err != nil {
+				app.post(func() { app.errMsg = "Backup failed: " + err.Error(); app.status = "" })
+				return
+			}
+			if err := os.WriteFile(outPath, []byte(dump), 0o600); err != nil {
+				app.post(func() { app.errMsg = "Backup failed: " + err.Error(); app.status = "" })
+				return
+			}
+			app.post(func() { app.errMsg = ""; app.status = "Backup written " + name })
+		}()
+		return
+	}
+
+	// MySQL / PostgreSQL：原生 dump 工具。
+	toolEnv, toolName := envMysqlDump, "mysqldump"
+	pg := app.engine() == "postgres"
+	if pg {
+		toolEnv, toolName = envPgDump, "pg_dump"
+	}
+	if !pg && app.engine() != "mysql" {
+		app.status = "Backup: unsupported engine " + app.engine()
 		app.invalidate()
 		return
 	}
-	src := app.conn.File
-	name := "backup-" + time.Now().Format("20060102-150405") + ".sql"
-	dir := app.store.Dir()
+	tool, err := resolveDumpTool(toolEnv, toolName)
+	if err != nil {
+		app.status = err.Error()
+		app.invalidate()
+		return
+	}
+	var args []string
+	if pg {
+		args = pgDumpArgs(app.conn, outPath)
+	} else {
+		args = mysqlDumpArgs(app.conn, outPath)
+	}
+	env := dumpToolEnv(app.conn, pg)
+
 	app.status = "Backing up…"
 	app.invalidate()
 	go func() {
-		dump, err := dumpSQLite(context.Background(), src)
-		if err != nil {
-			app.post(func() {
-				app.errMsg = "Backup failed: " + err.Error()
-				app.status = ""
-			})
+		if err := runDumpTool(context.Background(), tool, args, env, outPath); err != nil {
+			app.post(func() { app.errMsg = "Backup failed: " + err.Error(); app.status = "" })
 			return
 		}
-		path := filepath.Join(dir, name)
-		if err := os.WriteFile(path, []byte(dump), 0o600); err != nil {
-			app.post(func() {
-				app.errMsg = "Backup failed: " + err.Error()
-				app.status = ""
-			})
+		if err := verifyDumpFile(outPath); err != nil {
+			app.post(func() { app.errMsg = "Backup failed: " + err.Error(); app.status = "" })
 			return
 		}
-		app.post(func() {
-			app.errMsg = ""
-			app.status = "Backup written " + name
-		})
+		app.post(func() { app.errMsg = ""; app.status = "Backup written " + name })
 	}()
 }

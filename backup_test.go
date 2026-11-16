@@ -210,12 +210,46 @@ INSERT INTO t (id, name, note) VALUES (2, 'Alan', NULL);
 	}
 }
 
-func TestBackupRefusesANonSQLiteEngine(t *testing.T) {
+// newBackupApp 造一个已连接、有 store 的 app（备份要写文件到 store 的目录）。
+func newBackupApp(t *testing.T, conn Conn) *App {
+	t.Helper()
 	app := &App{open: true}
-	app.conn = Conn{Name: "remote", Kind: "mysql", Host: "127.0.0.1"}
+	app.conn = conn
+	store, err := NewStoreAt(filepath.Join(t.TempDir(), "connections.json"))
+	if err != nil {
+		t.Fatalf("NewStoreAt: %v", err)
+	}
+	app.store = store
+	return app
+}
+
+// TestBackupRefusesAnUnsupportedEngine：既不是 SQLite、也没有原生 dump 工具的
+// 引擎，明确拒绝而不是静默产出空文件。
+func TestBackupRefusesAnUnsupportedEngine(t *testing.T) {
+	app := newBackupApp(t, Conn{Name: "mssql", Kind: "sqlserver", Host: "127.0.0.1"})
 	app.backupDB()
-	if !strings.Contains(app.status, "SQLite only") {
-		t.Errorf("非 SQLite 的备份请求没有被拒绝：%q", app.status)
+	if !strings.Contains(app.status, "unsupported engine") {
+		t.Errorf("不支持的引擎没有被拒绝：%q", app.status)
+	}
+}
+
+// TestBackupNeedsTheDumpTool：本机没装 mysqldump / pg_dump 时明确说缺哪个工具，
+// 而不是静默成功（那会让人以为备份过了）。
+func TestBackupNeedsTheDumpTool(t *testing.T) {
+	t.Setenv(envMysqlDump, "")
+	t.Setenv(envPgDump, "")
+	t.Setenv("PATH", t.TempDir()) // PATH 里也找不到
+
+	mysql := newBackupApp(t, Conn{Name: "db", Kind: "mysql", Host: "127.0.0.1", Port: 3306, User: "u", Database: "d"})
+	mysql.backupDB()
+	if !strings.Contains(mysql.status, "mysqldump") {
+		t.Errorf("缺 mysqldump 时没有点名工具：%q", mysql.status)
+	}
+
+	pg := newBackupApp(t, Conn{Name: "db", Kind: "postgres", Host: "127.0.0.1", Port: 5432, User: "u", Database: "d"})
+	pg.backupDB()
+	if !strings.Contains(pg.status, "pg_dump") {
+		t.Errorf("缺 pg_dump 时没有点名工具：%q", pg.status)
 	}
 }
 
