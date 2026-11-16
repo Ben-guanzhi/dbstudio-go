@@ -1,0 +1,191 @@
+package main
+
+// 备份：把一个 SQLite 库导成 SQL 文本（等价于 `sqlite3 .dump`）。
+//
+// 为什么是 SQL 文本而不是文件复制：SQL 文本跨版本、跨引擎可移植，能读、能
+// 改、能进版本库；DBeaver / TablePlus 的 SQLite 备份也是 .dump。
+//
+// 三件事让产物可信：
+//   - 结构来自 sqlite_master（权威 DDL，不是从列反推）；
+//   - 数据分页读，大表不撑爆内存；
+//   - 外层包一个事务并关掉外键检查——恢复时插入顺序不受外键约束限制，
+//     这与 sqlite3 的 .dump 一致。
+//
+// MySQL / PostgreSQL 的备份走外部工具（mysqldump / pg_dump），下一步做。
+//
+// 波 101 续五十二。
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/Ben-guanzhi/dbcore"
+	"github.com/Ben-guanzhi/dbcore/sqlite"
+)
+
+// backupBatchSize 是一次读多少行：足够小以控内存，足够大以减少往返。
+const backupBatchSize = 500
+
+// dumpSQLite 把 path 指向的 SQLite 库导成 SQL 文本。
+//
+// 它开自己的连接（备份不该占用也不该被正在跑的事务影响），读完即关。
+// path 必须已存在：SQLite 打开一个不存在的文件会**创建**它，那样备份会
+// 静默产出一个空库——比报错危险得多。
+func dumpSQLite(ctx context.Context, path string) (string, error) {
+	if _, err := os.Stat(path); err != nil {
+		return "", fmt.Errorf("数据库文件不存在: %s", path)
+	}
+	drv, err := sqlite.Open(path)
+	if err != nil {
+		return "", fmt.Errorf("打开数据库: %w", err)
+	}
+	defer drv.Close()
+	sql, ok := drv.AsSQL()
+	if !ok {
+		return "", fmt.Errorf("该驱动没有 SQL 接口")
+	}
+
+	var out strings.Builder
+	out.WriteString("PRAGMA foreign_keys=OFF;\n")
+	out.WriteString("BEGIN TRANSACTION;\n")
+
+	// 结构：sqlite_master 里的权威 DDL。表先，其余（索引/触发器/视图）后，
+	// 与 .dump 的顺序一致——恢复时表先建好，索引后加。
+	schemaRes, err := sql.Execute(ctx,
+		"SELECT type, name, sql FROM sqlite_master "+
+			"WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' "+
+			"ORDER BY CASE type WHEN 'table' THEN 0 ELSE 1 END, name")
+	if err != nil {
+		return "", fmt.Errorf("读结构: %w", err)
+	}
+	var tables []string
+	for _, row := range schemaRes.Rows {
+		kind := textOf(row, 0)
+		ddl := textOf(row, 2)
+		if kind == "table" {
+			tables = append(tables, textOf(row, 1))
+			// 表名不带 sqlite_ 前缀的已经过滤；AUTO 索引（sql 为 NULL）
+			// 也过滤掉了。
+			out.WriteString(ddl)
+			out.WriteString(";\n")
+			continue
+		}
+		out.WriteString(ddl)
+		out.WriteString(";\n")
+	}
+
+	// 数据：每张表分页读，逐行 INSERT。
+	for _, table := range tables {
+		if err := dumpTable(ctx, sql, &out, table); err != nil {
+			return "", err
+		}
+	}
+
+	out.WriteString("COMMIT;\n")
+	out.WriteString("PRAGMA foreign_keys=ON;\n")
+	return out.String(), nil
+}
+
+// dumpTable 把一张表的数据写成 INSERT 语句，分页读。
+//
+// 列名取自 `SELECT *` 的结果本身，而不是再问一次目录：那样与 schema 的写法
+// 无关（SQLite 的 schema 是 main，但传空串还是 main 各驱动未必一致）。
+func dumpTable(ctx context.Context, sql dbcore.SQLDriver, out *strings.Builder, table string) error {
+	head, err := sql.Execute(ctx, "SELECT * FROM "+quoteIdent(table)+" LIMIT 0")
+	if err != nil {
+		return fmt.Errorf("读表 %s: %w", table, err)
+	}
+	names := head.Columns
+	if len(names) == 0 {
+		return nil
+	}
+	quoted := make([]string, len(names))
+	for i, c := range names {
+		quoted[i] = quoteIdent(c.Name)
+	}
+	prefix := "INSERT INTO " + quoteIdent(table) + " (" + strings.Join(quoted, ", ") + ") VALUES "
+
+	offset := 0
+	for {
+		res, err := sql.Execute(ctx,
+			fmt.Sprintf("SELECT %s FROM %s LIMIT %d OFFSET %d",
+				strings.Join(quoted, ", "), quoteIdent(table), backupBatchSize, offset))
+		if err != nil {
+			return fmt.Errorf("读数据 %s: %w", table, err)
+		}
+		for _, row := range res.Rows {
+			vals := make([]string, len(names))
+			for i := range names {
+				vals[i] = sqlLiteral("sqlite", valueAt(row, i))
+			}
+			out.WriteString(prefix + "(" + strings.Join(vals, ", ") + ");\n")
+		}
+		if len(res.Rows) < backupBatchSize {
+			break
+		}
+		offset += backupBatchSize
+	}
+	return nil
+}
+
+// textOf 取一个文本单元格，NULL 给空串。
+func textOf(row []dbcore.Value, i int) string {
+	if i >= len(row) || row[i].Kind == dbcore.ValNull {
+		return ""
+	}
+	return row[i].String()
+}
+
+// quoteIdent 用双引号包一个标识符，里面的双引号翻倍——SQL 的标准转义。
+func quoteIdent(s string) string {
+	return `"` + strings.ReplaceAll(s, `"`, `""`) + `"`
+}
+
+// backupDB 把当前连接备份成一个 .sql 文件，写在保存连接的同一目录里（与
+// 导出结果同一个约定位置），名字带时间戳。
+//
+// 目前只支持 SQLite（文件型）：MySQL / PostgreSQL 的备份走它们原生的
+// mysqldump / pg_dump，那是下一步。
+func (app *App) backupDB() {
+	if !app.open {
+		app.status = "Not connected"
+		app.invalidate()
+		return
+	}
+	if app.engine() != "sqlite" || app.conn.File == "" {
+		app.status = "Backup: SQLite only for now (MySQL/PostgreSQL use their own dump tools)"
+		app.invalidate()
+		return
+	}
+	src := app.conn.File
+	name := "backup-" + time.Now().Format("20060102-150405") + ".sql"
+	dir := app.store.Dir()
+	app.status = "Backing up…"
+	app.invalidate()
+	go func() {
+		dump, err := dumpSQLite(context.Background(), src)
+		if err != nil {
+			app.post(func() {
+				app.errMsg = "Backup failed: " + err.Error()
+				app.status = ""
+			})
+			return
+		}
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, []byte(dump), 0o600); err != nil {
+			app.post(func() {
+				app.errMsg = "Backup failed: " + err.Error()
+				app.status = ""
+			})
+			return
+		}
+		app.post(func() {
+			app.errMsg = ""
+			app.status = "Backup written " + name
+		})
+	}()
+}
