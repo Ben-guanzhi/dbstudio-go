@@ -154,7 +154,7 @@ func (app *App) connInfoView(c *ui.Context) {
 					TextColor(t.TextMuted).FontSize(10).Wrap()
 				ui.Row(c).Gap(8).Children(func() {
 					ui.Spacer(c)
-					if ui.PrimaryButton(c, "Close").Clicked() {
+					if ui.Button(c, "Close").Clicked() {
 						ci.open = false
 					}
 				})

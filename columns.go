@@ -461,7 +461,7 @@ func (app *App) columnsView(c *ui.Context) {
 						app.invalidate()
 					}
 					ui.Spacer(c)
-					if ui.PrimaryButton(c, "Close").Clicked() {
+					if ui.Button(c, "Close").Clicked() {
 						cm.open = false
 					}
 				})

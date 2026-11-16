@@ -199,7 +199,7 @@ func (app *App) erView(c *ui.Context) {
 				ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 					ui.Text(c, "ER Diagram").FontSize(13).Bold()
 					ui.Spacer(c)
-					if ui.PrimaryButton(c, "Close").Clicked() {
+					if ui.Button(c, "Close").Clicked() {
 						app.erOpen = false
 					}
 				})

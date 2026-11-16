@@ -90,7 +90,7 @@ func (app *App) historyView(c *ui.Context) {
 					if ui.Button(c, "Clear").FontSize(10).Clicked() {
 						app.clearHistory()
 					}
-					if ui.PrimaryButton(c, "Close").Clicked() {
+					if ui.Button(c, "Close").Clicked() {
 						app.historyOpen = false
 					}
 				})
