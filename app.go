@@ -236,6 +236,16 @@ type App struct {
 	sessionMsg   string
 	killPending  string
 
+	// 服务器变量查看（Navicat「变量」/ HeidiSQL Variables 的对齐）：内核
+	// ServerVariablesReader 能力（dbcore v0.6.0）。只读——接口就没有改值。
+	svReader  dbcore.ServerVariablesReader
+	svOpen    bool
+	svLoaded  bool
+	svLoading bool
+	svList    []dbcore.ServerVariable
+	svFilter  string
+	svStatus  string
+
 	// shortcutsOpen is the keyboard-shortcuts window: every accelerator the
 	// menus declare, on one screen. The list is read from the menu itself, so
 	// adding a menu item cannot leave the cheat sheet behind.
