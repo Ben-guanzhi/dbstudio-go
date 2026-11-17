@@ -567,7 +567,11 @@ func (app *App) stopEdit() {
 // when it has changes, and run the editor's SQL otherwise.
 func (app *App) commitOrRun() {
 	if app.edit.active && app.edit.dirty() {
-		app.commit()
+		// TablePlus 的 Review Changes 交互：先预览全部差异，确认才提交
+		// （Ctrl+Enter 与 Run 按钮同路径；面板里的 Confirm commit 再调
+		// 本函数会先经过预览——由 openReview 设置 reviewOpen，confirm 里
+		// 直接调 commit()）。
+		app.openReview()
 		return
 	}
 	app.runQuery()

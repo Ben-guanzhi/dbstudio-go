@@ -261,6 +261,12 @@ type App struct {
 	userPassInput  string
 	dropPending    string
 
+	// Review Changes 面板（TablePlus 的招牌交互）：网格编辑后、提交前预览
+	// 全部差异（增/改列级/删），确认才 commit。reviewReq 由 openReview 从
+	// 工作副本推导（BatchRequest）。
+	reviewOpen bool
+	reviewReq  dbcore.BatchRequest
+
 	// 查询构建器（Navicat View Builder / DBeaver Visual Query Builder 的对齐）：
 	// SelectSpec（dbcore/sqltext v0.9.0）直驱的表单。最小可用：主表 + 列多选 +
 	// AND 条件 + LIMIT；JOIN/聚合后续按需。
