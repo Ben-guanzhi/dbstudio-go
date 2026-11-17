@@ -270,6 +270,7 @@ type App struct {
 	qbLimit   float64
 	qbCols    []qbCol
 	qbConds   []qbCond
+	qbJoins   []qbJoin
 	// qbTableSeen 是上一帧的主表——Select 无 onChange 回调，每帧比较检测变化
 	// （history 的 histID prev 比较同一手法）。
 	qbTableSeen string

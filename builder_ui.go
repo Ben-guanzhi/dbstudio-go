@@ -29,6 +29,14 @@ type qbCond struct {
 	value string
 }
 
+// qbJoin 是一个 JOIN 的表单态（ON 左右列允许 "别名.列" 限定形式）。
+type qbJoin struct {
+	joinType string
+	table    string
+	onLeft   string
+	onRight  string
+}
+
 // openBuilder 打开查询构建器 modal（Tools 菜单）。
 func (app *App) openBuilder() {
 	if app.db == nil || app.db.SQL == nil {
@@ -55,6 +63,25 @@ func (app *App) qbSpec() sqltext.SelectSpec {
 	spec := sqltext.SelectSpec{
 		Table: sqltext.QuoteIdentLoose(d, app.qbTable),
 		Limit: int(app.qbLimit),
+	}
+	for _, j := range app.qbJoins {
+		if j.table == "" {
+			continue
+		}
+		join := sqltext.QBJoin{
+			Table: app.qbQuote(j.table),
+			Type:  j.joinType,
+		}
+		if j.onLeft != "" && j.onRight != "" {
+			join.On = append(join.On, sqltext.QBCond{
+				Kind: "cmp",
+				Col:  app.qbQuote(j.onLeft),
+				Op:   "=",
+				// 右侧是列名（限定形式），不是字面量——原样引用。
+				Value: app.qbQuote(j.onRight),
+			})
+		}
+		spec.Joins = append(spec.Joins, join)
 	}
 	for _, col := range app.qbCols {
 		if col.on {
@@ -117,6 +144,16 @@ func (app *App) builderView(c *ui.Context) {
 				ui.Scroll(c).Height(140).FillWidth().KeepScrollbars(true).Children(func() {
 					app.qbColsList(c)
 				})
+				// JOIN 行（可选：表/类型/ON 左右列——左列为主表或先连的表）。
+				for i := range app.qbJoins {
+					app.qbJoinRow(c, i)
+				}
+				ui.Row(c).Gap(8).Children(func() {
+					if ui.Button(c, "+ JOIN").FontSize(10).Clicked() {
+						app.qbJoins = append(app.qbJoins, qbJoin{joinType: "INNER"})
+						app.invalidate()
+					}
+				})
 				// 条件行。
 				ui.Text(c, "条件（AND 连接）").FontSize(10).TextColor(t.TextMuted)
 				for i := range app.qbConds {
@@ -155,6 +192,24 @@ func (app *App) qbColsList(c *ui.Context) {
 			}
 		})
 	}
+}
+
+// qbJoinRow 一个 JOIN 行：连接类型 + 表 + ON 左右列（ON 右列允许
+// "别名.列" 的限定形式——TextInput 自由填写）。
+func (app *App) qbJoinRow(c *ui.Context, i int) {
+	j := &app.qbJoins[i]
+	joinTypes := []string{"INNER", "LEFT", "RIGHT", "CROSS"}
+	ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
+		ui.Select(c, &j.joinType, joinTypes).Label("JOIN 类型")
+		ui.Select(c, &j.table, app.schemaTables()).Label("JOIN 表")
+		ui.TextInput(c, &j.onLeft).Width(120).Label("ON 左列")
+		ui.Text(c, "=").FontSize(11)
+		ui.TextInput(c, &j.onRight).Width(120).Label("ON 右列")
+		if ui.Button(c, "×").FontSize(10).Clicked() {
+			app.qbJoins = append(app.qbJoins[:i], app.qbJoins[i+1:]...)
+			app.invalidate()
+		}
+	})
 }
 
 // qbCondRow 一个条件行：列下拉 + 操作符下拉 + 值输入。
