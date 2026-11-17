@@ -268,6 +268,10 @@ type App struct {
 	renameNode  treeNode
 	renameInput string
 
+	// 数据传输（Navicat 的 Data Transfer 的对齐）：内核 TransferTable
+	// （dbcore v0.10.0）直驱——双连接（compare 同款）+ 表名 + 进度回调。
+	transfer transferState
+
 	// Review Changes 面板（TablePlus 的招牌交互）：网格编辑后、提交前预览
 	// 全部差异（增/改列级/删），确认才 commit。reviewReq 由 openReview 从
 	// 工作副本推导（BatchRequest）。
