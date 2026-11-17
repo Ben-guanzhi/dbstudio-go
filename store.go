@@ -210,7 +210,19 @@ func (s *Store) save() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(s.path, data, 0o600)
+	// tmp + rename 原子写：connections.json 丢了 = 全部连接丢失，崩溃/断电时
+	// 直接 WriteFile 会留下半个 JSON（之后每次启动都解析失败）。
+	return writeFileAtomic(s.path, data, 0o600)
+}
+
+// writeFileAtomic 把 data 写进 path：先写同目录临时文件再 rename 覆盖。崩溃时
+// 最坏留下一个 .tmp 残片，目标文件要么是旧的完整版、要么是新的完整版。
+func writeFileAtomic(path string, data []byte, perm os.FileMode) error {
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, data, perm); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
 }
 
 // saveHistory writes the history file. The caller must hold s.mu.
@@ -222,7 +234,7 @@ func (s *Store) saveHistory() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(s.histPath, data, 0o600)
+	return writeFileAtomic(s.histPath, data, 0o600)
 }
 
 // AddHistory prepends a statement that ran and writes the file. The store keeps
