@@ -32,6 +32,9 @@ type consoleTab struct {
 	buf   *editor.Buffer
 	state *editor.State
 	label string
+	// file 是绑定的 .sql 文件路径（空 = 未绑定——一次性缓冲）。
+	// 绑定后 Save/Open/Save As 可持久化（scripts_ui.go）。
+	file string
 }
 
 // newEditorState builds the editor state one console runs on: the SQL editor's
