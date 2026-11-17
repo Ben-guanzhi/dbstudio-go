@@ -37,6 +37,17 @@ type qbJoin struct {
 	onRight  string
 }
 
+// qbAgg 是一个聚合列的表单态（col 从当前表列里选）。
+type qbAgg struct {
+	agg string // COUNT/SUM/AVG/MIN/MAX
+	col string
+}
+
+// qbOrGroup 是一组 OR 条件（组间 AND）。
+type qbOrGroup struct {
+	conds []qbCond
+}
+
 // openBuilder 打开查询构建器 modal（Tools 菜单）。
 func (app *App) openBuilder() {
 	if app.db == nil || app.db.SQL == nil {
@@ -84,8 +95,49 @@ func (app *App) qbSpec() sqltext.SelectSpec {
 		spec.Joins = append(spec.Joins, join)
 	}
 	for _, col := range app.qbCols {
-		if col.on {
-			spec.Columns = append(spec.Columns, sqltext.QBColumn{Col: app.qbQuote(col.name)})
+		if !col.on {
+			continue
+		}
+		spec.Columns = append(spec.Columns, sqltext.QBColumn{Col: app.qbQuote(col.name)})
+	}
+	// 聚合列：agg != "" 的行生成 Agg(col) AS alias（别名 = agg_列名，可后改）。
+	for _, a := range app.qbAggs {
+		if a.col == "" || a.agg == "" {
+			continue
+		}
+		spec.Columns = append(spec.Columns, sqltext.QBColumn{
+			Col:   app.qbQuote(a.col),
+			Agg:   a.agg,
+			Alias: app.qbQuote(strings.ToLower(a.agg) + "_" + a.col),
+		})
+	}
+	// GROUP BY：勾选进分组的列（与聚合配套——聚合行有值时客户端自动把非聚合
+	// 的选中列放进 GROUP BY，见下方逻辑）。
+	if len(app.qbAggs) > 0 {
+		for _, g := range app.qbGroupBy {
+			if g != "" {
+				spec.GroupBy = append(spec.GroupBy, app.qbQuote(g))
+			}
+		}
+	}
+	// OR 条件组：一组内部 OR、组间 AND（spec 的 QBCond.Kind="or" 嵌套）。
+	for _, grp := range app.qbOrGroups {
+		conds := make([]sqltext.QBCond, 0, len(grp.conds))
+		for _, c := range grp.conds {
+			if c.col == "" {
+				continue
+			}
+			conds = append(conds, sqltext.QBCond{
+				Kind:  "cmp",
+				Col:   app.qbQuote(c.col),
+				Op:    c.op,
+				Value: sqltext.QuotedLiteral(d, c.value),
+			})
+		}
+		if len(conds) > 1 {
+			spec.Where = append(spec.Where, sqltext.QBCond{Kind: "or", Children: conds})
+		} else if len(conds) == 1 {
+			spec.Where = append(spec.Where, conds[0])
 		}
 	}
 	for _, cond := range app.qbConds {
@@ -154,11 +206,40 @@ func (app *App) builderView(c *ui.Context) {
 						app.invalidate()
 					}
 				})
+				// 聚合行：agg(col) AS agg_col；有聚合时非聚合选中列进 GROUP BY。
+				for i := range app.qbAggs {
+					app.qbAggRow(c, t, i)
+				}
+				ui.Row(c).Gap(8).Children(func() {
+					if ui.Button(c, "+ 聚合").FontSize(10).Clicked() {
+						app.qbAggs = append(app.qbAggs, qbAgg{agg: "COUNT"})
+						app.invalidate()
+					}
+					if len(app.qbAggs) > 0 {
+						if ui.Button(c, "其余选中列 → GROUP BY").FontSize(10).
+							Tooltip("把未参与聚合的选中列放进分组").
+							Clicked() {
+							app.qbFillGroupBy()
+						}
+					}
+				})
 				// 条件行。
 				ui.Text(c, "条件（AND 连接）").FontSize(10).TextColor(t.TextMuted)
 				for i := range app.qbConds {
 					app.qbCondRow(c, i)
 				}
+				// OR 组：组内 OR、组间 AND。
+				for gi := range app.qbOrGroups {
+					app.qbOrGroupRow(c, t, gi)
+				}
+				ui.Row(c).Gap(8).Children(func() {
+					if ui.Button(c, "+ OR 组（组内任一命中）").FontSize(10).Clicked() {
+						app.qbOrGroups = append(app.qbOrGroups, qbOrGroup{
+							conds: []qbCond{{op: "="}, {op: "="}},
+						})
+						app.invalidate()
+					}
+				})
 				ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 					ui.Text(c, "LIMIT").FontSize(11)
 					ui.NumberInput(c, &app.qbLimit, 0, 100000, 1)
@@ -212,11 +293,65 @@ func (app *App) qbJoinRow(c *ui.Context, i int) {
 	})
 }
 
+// qbAggRow 一个聚合行：函数下拉（COUNT/SUM/AVG/MIN/MAX）+ 列下拉 + 删除。
+func (app *App) qbAggRow(c *ui.Context, t *ui.Theme, i int) {
+	a := &app.qbAggs[i]
+	aggs := []string{"COUNT", "SUM", "AVG", "MIN", "MAX"}
+	ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
+		ui.Select(c, &a.agg, aggs).Label("聚合函数")
+		ui.Select(c, &a.col, app.qbColNames()).Label("聚合列")
+		ui.Text(c, "AS "+strings.ToLower(a.agg)+"_"+a.col).FontSize(10).TextColor(t.TextMuted).SingleLine()
+		if ui.Button(c, "×").FontSize(10).Clicked() {
+			app.qbAggs = append(app.qbAggs[:i], app.qbAggs[i+1:]...)
+			app.invalidate()
+		}
+	})
+}
+
+// qbFillGroupBy 把未参与聚合的选中列放进 GROUP BY（聚合查询的标准搭配——
+// SELECT 里的非聚合列必须分组，否则 SQL 报错）。
+func (app *App) qbFillGroupBy() {
+	app.qbGroupBy = nil
+	for _, col := range app.qbCols {
+		if !col.on {
+			continue
+		}
+		app.qbGroupBy = append(app.qbGroupBy, col.name)
+	}
+	app.invalidate()
+}
+
+// qbOrGroupRow 一个 OR 组：组内两个条件行（列/操作符/值）+ 删除组。
+func (app *App) qbOrGroupRow(c *ui.Context, t *ui.Theme, gi int) {
+	grp := &app.qbOrGroups[gi]
+	ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
+		ui.Text(c, "OR 组").FontSize(10).TextColor(t.TextMuted)
+		for ci := range grp.conds {
+			cond := &grp.conds[ci]
+			ui.Select(c, &cond.col, app.qbColNames()).Label("OR 条件列")
+			ui.Select(c, &cond.op, opsList()).Label("OR 操作符")
+			ui.TextInput(c, &cond.value).Width(140).Label("OR 值")
+			if ci == 0 {
+				ui.Text(c, "OR").FontSize(10).TextColor(t.TextMuted)
+			}
+		}
+		if ui.Button(c, "×").FontSize(10).Clicked() {
+			app.qbOrGroups = append(app.qbOrGroups[:gi], app.qbOrGroups[gi+1:]...)
+			app.invalidate()
+		}
+	})
+}
+
+// opsList 是条件行的操作符清单（qbCondRow 与 OR 组共用）。
+func opsList() []string {
+	return []string{"=", "<>", ">", "<", ">=", "<=", "LIKE", "NOT LIKE"}
+}
+
 // qbCondRow 一个条件行：列下拉 + 操作符下拉 + 值输入。
 func (app *App) qbCondRow(c *ui.Context, i int) {
 	cond := &app.qbConds[i]
 	names := app.qbColNames()
-	ops := []string{"=", "<>", ">", "<", ">=", "<=", "LIKE", "NOT LIKE"}
+	ops := opsList()
 	ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
 		ui.Select(c, &cond.col, names).Label("条件列")
 		ui.Select(c, &cond.op, ops).Label("操作符")

@@ -271,6 +271,9 @@ type App struct {
 	qbCols    []qbCol
 	qbConds   []qbCond
 	qbJoins   []qbJoin
+	qbAggs    []qbAgg
+	qbGroupBy []string
+	qbOrGroups []qbOrGroup
 	// qbTableSeen 是上一帧的主表——Select 无 onChange 回调，每帧比较检测变化
 	// （history 的 histID prev 比较同一手法）。
 	qbTableSeen string
