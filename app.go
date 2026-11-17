@@ -261,6 +261,13 @@ type App struct {
 	userPassInput  string
 	dropPending    string
 
+	// 重命名重构（DBeaver/DataGrip 的招牌）：表改名走内核 RenameStatement 的
+	// 方言 DDL；执行经 Safe Mode 闸门；编辑器缓冲的旧名引用本地改写（词边界、
+	// 跳过字符串字面量）。
+	renameOpen  bool
+	renameNode  treeNode
+	renameInput string
+
 	// Review Changes 面板（TablePlus 的招牌交互）：网格编辑后、提交前预览
 	// 全部差异（增/改列级/删），确认才 commit。reviewReq 由 openReview 从
 	// 工作副本推导（BatchRequest）。
