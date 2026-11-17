@@ -90,6 +90,8 @@ func (app *App) setMenu() {
 		{Label: "Tools", Submenu: []*mygo.MenuItem{
 			{Label: "Statement History", Accelerator: "CmdOrCtrl+H",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openHistory() }},
+			{Label: "Snippets…", Accelerator: "CmdOrCtrl+Shift+S",
+				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openSnippets() }},
 			{Label: "Backup Database…",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.backupDB() }},
 			{Label: "Restore Database…",

@@ -51,6 +51,9 @@ func main() {
 		}
 		store.loadHistory()
 		app.store = store
+		// 片段库：与 connections.json 同目录，跨连接复用的命名 SQL 块。
+		app.snippets = NewSnippetStore(store.Dir())
+		_ = app.snippets.Load()
 		// 波 100 续：发现 exe 旁的驱动插件（dbstudio-plugin-<kind>.exe），
 		// 注册进内核工厂表——连接表单的 Kind 下拉据此动态出现对应引擎。
 		DiscoverPlugins(store.Dir())

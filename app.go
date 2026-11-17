@@ -217,6 +217,15 @@ type App struct {
 	histID      string // the history entry the history sidebar shows, "" when none
 	histFavOnly bool   // the history list shows favorites alone
 
+	// 片段库（Navicat 片段 / DataGrip live templates 的对齐）：跨连接复用的
+	// 命名 SQL 块。snippetOpen 是 modal 开关；snippetNameInput 是「Save from
+	// editor」的行内名字；snippetID 是列表选中态；snippetMsg 是一行反馈。
+	snippets         *SnippetStore
+	snippetOpen      bool
+	snippetNameInput string
+	snippetID        string
+	snippetMsg       string
+
 	// shortcutsOpen is the keyboard-shortcuts window: every accelerator the
 	// menus declare, on one screen. The list is read from the menu itself, so
 	// adding a menu item cannot leave the cheat sheet behind.
