@@ -70,6 +70,7 @@ func (app *App) view(c *ui.Context) {
 	app.snippetView(c)
 	app.sessionsView(c)
 	app.serverVarsView(c)
+	app.usersView(c)
 	app.shortcutsView(c)
 	app.erView(c)
 	app.confirmView(c)

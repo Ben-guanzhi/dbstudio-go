@@ -96,6 +96,8 @@ func (app *App) setMenu() {
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openSessions() }},
 			{Label: "Server Variables…",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openServerVars() }},
+			{Label: "Users…",
+				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openUsers() }},
 			{Label: "Backup Database…",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.backupDB() }},
 			{Label: "Restore Database…",

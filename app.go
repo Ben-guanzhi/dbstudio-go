@@ -246,6 +246,21 @@ type App struct {
 	svFilter  string
 	svStatus  string
 
+	// 用户管理（Navicat「用户」/ HeidiSQL User manager 的对齐）：内核
+	// UserAdmin 能力（dbcore v0.7.0）。DDL 文本由内核生成，执行走
+	// app.db.SQL（10s 超时）；Drop 两步确认（dropPending 记选中）。
+	userAdmin      dbcore.UserAdmin
+	usersOpen      bool
+	usersLoaded    bool
+	usersLoading   bool
+	userList       []dbcore.ServerUser
+	userSel        string
+	userMsg        string
+	userNameInput  string
+	userHostInput  string
+	userPassInput  string
+	dropPending    string
+
 	// shortcutsOpen is the keyboard-shortcuts window: every accelerator the
 	// menus declare, on one screen. The list is read from the menu itself, so
 	// adding a menu item cannot leave the cheat sheet behind.
