@@ -113,6 +113,10 @@ func (app *App) exportResult(format exportFormat) {
 		return
 	}
 
+	// 结果可能被行数上限截断（driver 只载入前 N 行）——导出的是**已载入的
+	// 那部分**。静默导出被截断的结果 = 用户以为拿到全量，实际少了后面的行。
+	truncated := app.result != nil && app.result.Truncated
+
 	app.status = "Exporting…"
 	dir := app.store.Dir()
 	ext := format.ext()
@@ -128,7 +132,11 @@ func (app *App) exportResult(format exportFormat) {
 		}
 		app.post(func() {
 			app.errMsg = ""
-			app.status = "Exported " + name
+			note := ""
+			if truncated {
+				note = " (exported loaded rows only — result was truncated)"
+			}
+			app.status = "Exported " + name + note
 		})
 	}()
 }
