@@ -226,6 +226,16 @@ type App struct {
 	snippetID        string
 	snippetMsg       string
 
+	// 会话管理（Navicat 会话管理 / DBeaver Sessions 的对齐）：内核
+	// ProcessLister 能力（dbcore v0.5.0）。sessionsOpen 是 modal 开关；
+	// killPending 记两步确认的选中 ID——同一个选中上连按两次 Kill 才执行。
+	sessions     dbcore.ProcessLister
+	sessionsOpen bool
+	sessionList  []dbcore.ServerProcess
+	sessionSel   string
+	sessionMsg   string
+	killPending  string
+
 	// shortcutsOpen is the keyboard-shortcuts window: every accelerator the
 	// menus declare, on one screen. The list is read from the menu itself, so
 	// adding a menu item cannot leave the cheat sheet behind.
