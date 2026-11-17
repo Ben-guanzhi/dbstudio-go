@@ -261,6 +261,19 @@ type App struct {
 	userPassInput  string
 	dropPending    string
 
+	// 查询构建器（Navicat View Builder / DBeaver Visual Query Builder 的对齐）：
+	// SelectSpec（dbcore/sqltext v0.9.0）直驱的表单。最小可用：主表 + 列多选 +
+	// AND 条件 + LIMIT；JOIN/聚合后续按需。
+	qbOpen    bool
+	qbMsg     string
+	qbTable   string
+	qbLimit   float64
+	qbCols    []qbCol
+	qbConds   []qbCond
+	// qbTableSeen 是上一帧的主表——Select 无 onChange 回调，每帧比较检测变化
+	// （history 的 histID prev 比较同一手法）。
+	qbTableSeen string
+
 	// shortcutsOpen is the keyboard-shortcuts window: every accelerator the
 	// menus declare, on one screen. The list is read from the menu itself, so
 	// adding a menu item cannot leave the cheat sheet behind.

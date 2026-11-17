@@ -98,6 +98,8 @@ func (app *App) setMenu() {
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openServerVars() }},
 			{Label: "Users…",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openUsers() }},
+			{Label: "Query Builder…",
+				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openBuilder() }},
 			{Label: "Backup Database…",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.backupDB() }},
 			{Label: "Restore Database…",
