@@ -220,6 +220,24 @@ func statement(kind copyKind, dbType, schema, table string, cols []dbcore.Column
 // delimitedText renders the result's rows with a delimiter: a header of the
 // column names and one record per row, NULL left empty as a spreadsheet reads
 // it. ',' is CSV; '\t' is TSV, the format logs and data pipes are written in.
+// formulaGuard 防 CSV 公式注入（OWASP CSV Injection）：以 = + - @ 或制表/回车
+// 开头的单元格，在 Excel / LibreOffice 里会被当公式执行（=cmd|… 可触发命令）。
+// 前缀单引号使其按文本显示；**纯数字字面量豁免**（-5、+3 不动），否则会破坏
+// 用户在 Excel 里的数值计算。
+func formulaGuard(s string) string {
+	if s == "" {
+		return s
+	}
+	if _, err := strconv.ParseFloat(s, 64); err == nil {
+		return s
+	}
+	switch s[0] {
+	case '=', '+', '-', '@', '\t', '\r':
+		return "'" + s
+	}
+	return s
+}
+
 func delimitedText(res *dbcore.QueryResult, comma rune) (string, error) {
 	var buf bytes.Buffer
 	w := csv.NewWriter(&buf)
@@ -235,7 +253,7 @@ func delimitedText(res *dbcore.QueryResult, comma rune) (string, error) {
 	for _, row := range res.Rows {
 		rec := make([]string, len(res.Columns))
 		for i := range res.Columns {
-			rec[i] = textCell(valueAt(row, i))
+			rec[i] = formulaGuard(textCell(valueAt(row, i)))
 		}
 		if err := w.Write(rec); err != nil {
 			return "", err
