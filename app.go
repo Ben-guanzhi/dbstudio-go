@@ -147,6 +147,7 @@ type App struct {
 	stErr   string
 	stTable string
 	stCols  []dbcore.ColumnInfo
+	stIdxs  []dbcore.IndexInfo
 	stGen   uint64
 	stGrid  ui.ListState
 

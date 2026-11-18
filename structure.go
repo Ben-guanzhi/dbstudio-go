@@ -10,9 +10,12 @@ package main
 
 import (
 	"context"
+	"strings"
 	"strconv"
+	"time"
 
 	"github.com/Ben-guanzhi/dbcore"
+	"github.com/Ben-guanzhi/dbcore/ddl"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -54,6 +57,18 @@ func (app *App) loadStructure(n treeNode, gen uint64) {
 			return
 		}
 		app.stCols = cols
+		// 索引区与列同源拉取（引擎不支持 ListIndexes 时空——查看仍是全的）。
+		loadAsync(app, metadataTimeout, func(ctx context.Context) ([]dbcore.IndexInfo, error) {
+			return db.SQL.ListIndexes(ctx, n.parent, n.label)
+		}, func(idxs []dbcore.IndexInfo, ierr error) {
+			if gen != app.stGen {
+				return
+			}
+			if ierr == nil {
+				app.stIdxs = idxs
+			}
+			app.invalidate()
+		})
 		app.invalidate()
 	})
 }
@@ -79,6 +94,7 @@ func (app *App) structureView(c *ui.Context) {
 					ui.Text(c, app.stErr).TextColor(t.Danger).Padding(2, 0).Wrap()
 				}
 				app.structureGrid(c, t)
+				app.structureIndexRow(c, t)
 				ui.Row(c).Gap(8).Children(func() {
 					ui.Spacer(c)
 					if ui.Button(c, "View DDL").Clicked() {
@@ -158,4 +174,55 @@ func (app *App) stSchema() string {
 		}
 	}
 	return ""
+}
+
+// structureIndexRow 把该表的索引画成一行行「名字（列） + Drop」——Drop 走
+// 内核 DropIndex（refuseWrite 闸门 + 直接执行 + refreshSchema，与列/表改名
+// 的同一闸门纪律）。
+func (app *App) structureIndexRow(c *ui.Context, t *ui.Theme) {
+	if len(app.stIdxs) == 0 {
+		return
+	}
+	ui.Text(c, "Indexes").FontSize(11).Bold()
+	for _, ix := range app.stIdxs {
+		if ix.Primary {
+			continue // 主键删除是表级操作（DropPrimaryKey），不混在索引区
+		}
+		ix := ix
+		ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
+			ui.Text(c, ix.Name).SingleLine()
+			ui.Text(c, "("+strings.Join(ix.Columns, ", ")+")").
+				FontSize(10).TextColor(t.TextMuted).SingleLine()
+			ui.Spacer(c)
+			if ui.Button(c, "Drop").FontSize(10).Clicked() {
+				app.dropTableIndex(ix.Name)
+			}
+		})
+	}
+}
+
+// dropTableIndex 删一个索引：只读闸门 → 内核 DDL → 执行 → 全量刷新。
+func (app *App) dropTableIndex(name string) {
+	if app.readOnly() {
+		app.refuseWrite("DROP INDEX " + name)
+		return
+	}
+	stmt := ddl.DropIndex(app.qbDialectForDDL(), app.stSchema(), app.stTableOnly(), name)
+	app.status = "Dropping index…"
+	app.invalidate()
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		_, err := app.db.SQL.Execute(ctx, stmt)
+		app.post(func() {
+			if err != nil {
+				app.errMsg = "Drop index failed: " + err.Error()
+				app.status = ""
+			} else {
+				app.status = "Dropped index " + name
+				app.refreshSchema()
+			}
+			app.invalidate()
+		})
+	}()
 }
