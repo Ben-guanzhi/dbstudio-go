@@ -154,6 +154,9 @@ func (app *App) treeNodeMenu(m *ui.Menu, n treeNode) {
 			// column belongs to.
 			app.findUsages(treeNode{label: n.table, parent: n.parent, kind: nodeTable})
 		}
+		if m.Item("Rename Column…").Chosen() {
+			app.startColumnRename(n)
+		}
 	}
 }
 

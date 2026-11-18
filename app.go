@@ -262,6 +262,11 @@ type App struct {
 	userPassInput  string
 	dropPending    string
 
+	// 列重命名（表改名 §207 的姊妹）：内核 RenameColumn（v0.14.0）直驱。
+	colRenameOpen  bool
+	colRenameNode  treeNode
+	colRenameInput string
+
 	// 重命名重构（DBeaver/DataGrip 的招牌）：表改名走内核 RenameStatement 的
 	// 方言 DDL；执行经 Safe Mode 闸门；编辑器缓冲的旧名引用本地改写（词边界、
 	// 跳过字符串字面量）。
