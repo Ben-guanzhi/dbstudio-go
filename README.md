@@ -28,6 +28,16 @@ SQL editor and its result grid on the right, one status line underneath.
 - **The cheap guards** — the window title, the colour band and the status line
   always say which server you are on; risky statements are questioned before
   they run.
+- **The management tools** — sessions list with kill (two-step confirm),
+  server variables (read-only), user management (create/drop/grant through the
+  kernel's dialect-correct DDL), data transfer between saved connections,
+  schema refresh after a rename.
+- **Build and review** — a query builder that assembles SELECT (joins,
+  aggregates, GROUP BY, OR groups) into the editor; a Review Changes panel
+  that shows every staged insert/update/delete before the commit; SQL
+  snippets by name; script files open/save/save-as per console tab.
+- **A model designer** — entities, columns and 1:N / N:M relations edited as
+  a versionable JSON file, forward-engineered into dialect-correct DDL.
 - **Yours** — connections live beside the binary with the password in the OS
   keyring, the session and the column layout survive a restart, nothing is
   uploaded anywhere.
