@@ -102,6 +102,8 @@ func (app *App) setMenu() {
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openBuilder() }},
 			{Label: "Data Transfer…",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openTransfer() }},
+			{Label: "Model Designer…",
+				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openModelEditor() }},
 			mygo.Separator(),
 			{Label: "Open Script…", Accelerator: "CmdOrCtrl+O",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openScriptFile() }},

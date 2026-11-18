@@ -75,6 +75,7 @@ func (app *App) view(c *ui.Context) {
 	app.reviewView(c)
 	app.renameView(c)
 	app.transferView(c)
+	app.modelEditorView(c)
 	app.shortcutsView(c)
 	app.erView(c)
 	app.confirmView(c)

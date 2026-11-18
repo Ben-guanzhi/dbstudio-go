@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Ben-guanzhi/dbcore"
+	"github.com/Ben-guanzhi/dbcore/model"
 	"github.com/Ben-guanzhi/dbcore/usability"
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
@@ -267,6 +268,16 @@ type App struct {
 	renameOpen  bool
 	renameNode  treeNode
 	renameInput string
+
+	// 模型编辑器（Navicat Model 的最小可用形态）：内核 dbcore/model 的
+	// UIModel 直驱——实体/列/关系的表单编辑 + JSON 存取 + DDL 生成进编辑器。
+	modelEdit       *model.UIModel
+	modelOpen       bool
+	modelMsg        string
+	modelSelEntity  string
+	modelNewCol     string
+	modelNewColType string
+	modelNewEntity  string
 
 	// 数据传输（Navicat 的 Data Transfer 的对齐）：内核 TransferTable
 	// （dbcore v0.10.0）直驱——双连接（compare 同款）+ 表名 + 进度回调。
