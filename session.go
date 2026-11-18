@@ -130,7 +130,11 @@ func (app *App) saveSession() {
 	if err != nil {
 		return
 	}
-	if err := os.WriteFile(path, data, 0o600); err != nil {
+	// 原子写（tmp + rename）——session 是"切换 tab 即写"的高频写（consoles.go
+	// 的 selectConsole），非原子写在崩溃时会留下半截 JSON；而 loadSession 对
+	// 畸形文件直接返回零值（整个工作区丢失）。connections/history 早就用
+	// writeFileAtomic，session 不能是例外。
+	if err := writeFileAtomic(path, data, 0o600); err != nil {
 		app.errMsg = "Session not saved: " + err.Error()
 	}
 }
