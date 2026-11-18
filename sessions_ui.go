@@ -153,6 +153,11 @@ func (app *App) loadSessions() {
 
 // killSelectedSession 执行终止并刷新列表。
 func (app *App) killSelectedSession() {
+	// KILL 是服务端写操作——只读连接必须拒绝（与 DDL/DML 同纪律）。
+	if app.readOnly() {
+		app.refuseWrite("KILL " + app.sessionSel)
+		return
+	}
 	if app.sessions == nil || app.sessionSel == "" {
 		return
 	}

@@ -150,6 +150,11 @@ func (app *App) selUser() (dbcore.ServerUser, bool) {
 
 // createUser 生成并执行 CREATE USER（走 Safe Mode 闸门的执行路径）。
 func (app *App) createUser() {
+	// 用户/权限变更是 DDL——只读连接必须拒绝。
+	if app.readOnly() {
+		app.refuseWrite("CREATE USER")
+		return
+	}
 	name := strings.TrimSpace(app.userNameInput)
 	if name == "" {
 		app.userMsg = "用户名不能为空"
@@ -165,6 +170,11 @@ func (app *App) createUser() {
 
 // dropSelectedUser 生成并执行 DROP USER（已在两步确认后）。
 func (app *App) dropSelectedUser() {
+	// 用户/权限变更是 DDL——只读连接必须拒绝。
+	if app.readOnly() {
+		app.refuseWrite("DROP USER")
+		return
+	}
 	u, ok := app.selUser()
 	if !ok {
 		return
@@ -174,6 +184,11 @@ func (app *App) dropSelectedUser() {
 
 // grantSelectedUser 把当前数据库的完全权限授给选中用户。
 func (app *App) grantSelectedUser() {
+	// 用户/权限变更是 DDL——只读连接必须拒绝。
+	if app.readOnly() {
+		app.refuseWrite("GRANT")
+		return
+	}
 	u, ok := app.selUser()
 	if !ok {
 		return

@@ -154,6 +154,11 @@ func quoteIdent(s string) string {
 // MySQL / PostgreSQL 交给原生的 mysql / psql 读同一个文件。恢复是破坏性的：
 // 备份产物自带 DROP，会把目标库现有的表换掉。
 func (app *App) restoreDB() {
+	// Restore 会执行备份文件里的全部 DDL/DML——只读连接必须拒绝。
+	if app.readOnly() {
+		app.refuseWrite("RESTORE")
+		return
+	}
 	if !app.open {
 		app.status = "Not connected"
 		app.invalidate()

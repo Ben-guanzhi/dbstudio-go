@@ -147,6 +147,12 @@ func rewriteSQLIdentifiers(text, old, neu string) string {
 // doRename 执行改名：DDL（Safe Mode 闸门走 runScriptGuard 的确认流）→
 // 改写编辑器 → 关弹窗。
 func (app *App) doRename() {
+	// 只读连接是"锁"不是"提醒"——DDL 走的是内核 RenameStatement 直发，
+	// 不经过 runScriptGuard 的写关键字守卫，必须在这里挡住。
+	if app.readOnly() {
+		app.refuseWrite("RENAME TABLE")
+		return
+	}
 	newName := strings.TrimSpace(app.renameInput)
 	if newName == "" || newName == app.renameNode.label || app.db == nil {
 		return
