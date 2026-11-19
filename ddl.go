@@ -146,6 +146,9 @@ func (app *App) treeNodeMenu(m *ui.Menu, n treeNode) {
 		if m.Item("Empty Table…").Chosen() {
 			app.emptyTable(n)
 		}
+		if m.Item("Drop View…").Chosen() {
+			app.dropView(n)
+		}
 	case nodeColumn:
 		if m.Item("Copy Name").Chosen() {
 			mygo.Clipboard.WriteText(n.label)

@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Ben-guanzhi/dbcore/ddl"
 	"github.com/Ben-guanzhi/dbcore/sqltext"
 	"github.com/egoist/mygo/ui"
 )
@@ -219,6 +220,30 @@ func (app *App) emptyTable(n treeNode) {
 	// 放进编辑器后走既有的运行入口——它构造 runner（含事务路由）并调用
 	// runScriptGuard：TRUNCATE 在 risky 清单里，confirmRun 会展示语句并
 	// 要求确认；只读连接被 refuseWrite 挡住。用户看到的就是将要执行的。
+	app.edBuf.Set(stmt)
+	app.runQuery()
+}
+
+// dropView 删除一个视图（树菜单「Drop View…」）：只作用于 sub=="view" 的
+// 节点——表的同名菜单项直接返回（防误操作）。内核 ddl.DropView 生成方言
+// 语句（MSSQL 的 IF OBJECT_ID 守卫 vs 其它 DROP VIEW IF EXISTS），语句进
+// 编辑器走既有 runQuery → runScriptGuard（DROP 的 confirmRun ask + 只读
+// refuseWrite）。
+func (app *App) dropView(n treeNode) {
+	if n.kind != nodeTable || n.sub != "view" {
+		return
+	}
+	if app.readOnly() {
+		app.refuseWrite("DROP VIEW " + n.label)
+		return
+	}
+	quoted, err := sqltext.QualifiedName(app.qbDialectForDDL(), n.parent, n.label)
+	if err != nil {
+		app.errMsg = "视图名不合法：" + err.Error()
+		app.invalidate()
+		return
+	}
+	stmt := ddl.DropView(app.qbDialectForDDL(), quoted)
 	app.edBuf.Set(stmt)
 	app.runQuery()
 }
