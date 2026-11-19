@@ -181,8 +181,9 @@ func (app *App) runQuery() {
 // order the engine emitted them (a batch or a stored procedure can answer with
 // several), and the error that stopped it.
 type runOut struct {
-	sets []*dbcore.QueryResult
-	err  error
+	sets   []*dbcore.QueryResult
+	err    error
+	notRun bool // the statement never ran: a failure (or a stop) earlier in the script stopped the run
 }
 
 // txEnv is the transaction a run joins, resolved before the statements go so the
@@ -293,9 +294,23 @@ func (app *App) runScriptGuard(stmts []string, run stmtRunner, allowEdit bool, g
 				if !cancelled {
 					out[i].err = fmt.Errorf("statement %d: %w", i+1, err)
 				}
+				// Statements after the failed one never ran. Leaving their tabs
+				// at the default "Query done" would read as if they had.
+				for j := i + 1; j < len(out); j++ {
+					out[j].notRun = true
+				}
 				break
 			}
 			out[i].sets = sets
+		}
+		if cancelled {
+			// The stop landed mid-script: statements after the cancelled one
+			// did not run either.
+			for j := range out {
+				if out[j].err == nil && len(out[j].sets) == 0 && !out[j].notRun && j > 0 {
+					out[j].notRun = true
+				}
+			}
 		}
 		elapsed := time.Since(app.start)
 		app.post(func() {
@@ -377,6 +392,9 @@ func (app *App) applyRun(gen uint64, tabs []*resTab, stmts []string, out []runOu
 		if len(o.sets) == 0 {
 			t.result = nil
 			t.status = "Query done"
+			if o.notRun {
+				t.status = "Not run"
+			}
 			t.edit.clear()
 			last = t
 			continue
@@ -397,7 +415,10 @@ func (app *App) applyRun(gen uint64, tabs []*resTab, stmts []string, out []runOu
 	}
 	if cancelled {
 		// The statement(s) that did not finish are the run's report, not an
-		// error: the user asked for the stop.
+		// error: the user asked for the stop. The CANCELLED statement is the
+		// one that was running when Stop landed; tabs already marked "Not
+		// run" never started, and "Cancelled" on them would lie about which
+		// statement the stop actually hit.
 		last.errMsg = ""
 		last.status = "Cancelled"
 		app.status = "Query cancelled"
