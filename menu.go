@@ -106,6 +106,8 @@ func (app *App) setMenu() {
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openModelEditor() }},
 			{Label: "Export Data Dictionary…",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.exportDictionary() }},
+			{Label: "Generate Data…",
+				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openDataGen() }},
 			mygo.Separator(),
 			{Label: "Open Script…", Accelerator: "CmdOrCtrl+O",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openScriptFile() }},

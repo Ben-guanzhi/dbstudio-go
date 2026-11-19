@@ -263,6 +263,14 @@ type App struct {
 	userPassInput  string
 	dropPending    string
 
+	// 数据生成器（dbcore v0.8.0）：按当前表列类型生成测试 INSERT。
+	dgOpen   bool
+	dgMsg    string
+	dgTable  string
+	dgRows   float64
+	dgSeed   float64
+	dgSkipPK bool
+
 	// 列重命名（表改名 §207 的姊妹）：内核 RenameColumn（v0.14.0）直驱。
 	colRenameOpen  bool
 	colRenameNode  treeNode
