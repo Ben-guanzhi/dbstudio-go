@@ -246,8 +246,9 @@ func (app *App) rollback() {
 // commit turns the working copy into one batch and applies it.
 func (app *App) commit() {
 	if app.readOnly() {
+		// 与 refuseWrite 同款的可操作指引——错误要告诉用户下一步做什么。
 		app.errMsg = "Read-only connection: the working copy cannot be committed"
-		app.status = "Blocked by read-only mode"
+		app.status = "Blocked by read-only mode — unlock with the toolbar's lock"
 		app.invalidate()
 		return
 	}
