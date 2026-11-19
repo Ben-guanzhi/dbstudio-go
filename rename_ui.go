@@ -189,3 +189,36 @@ func (app *App) doRename() {
 		})
 	}()
 }
+
+// emptyTable 清空一张表（树菜单「Empty Table…」）：内核 TruncateStatement
+// 生成方言正确的语句（SQLite 用 DELETE FROM——保 sqlite_sequence；其它引擎
+// 用 TRUNCATE）。语句进编辑器并走 runScriptGuard——riskyStatement 对
+// TRUNCATE 的 confirmRun 询问 + 只读 refuseWrite 全套闸门。用户看到的
+// 就是将要执行的，确认后才跑（不清空于无形）。
+func (app *App) emptyTable(n treeNode) {
+	if n.kind != nodeTable {
+		return
+	}
+	if app.db == nil || app.db.SQL == nil {
+		app.errMsg = "Not connected"
+		app.invalidate()
+		return
+	}
+	quoted, err := sqltext.QualifiedName(app.qbDialectForDDL(), n.parent, n.label)
+	if err != nil {
+		app.errMsg = "表名不合法：" + err.Error()
+		app.invalidate()
+		return
+	}
+	stmt, err := sqltext.TruncateStatement(app.qbDialectForDDL(), quoted)
+	if err != nil {
+		app.errMsg = "生成 TRUNCATE 失败：" + err.Error()
+		app.invalidate()
+		return
+	}
+	// 放进编辑器后走既有的运行入口——它构造 runner（含事务路由）并调用
+	// runScriptGuard：TRUNCATE 在 risky 清单里，confirmRun 会展示语句并
+	// 要求确认；只读连接被 refuseWrite 挡住。用户看到的就是将要执行的。
+	app.edBuf.Set(stmt)
+	app.runQuery()
+}
