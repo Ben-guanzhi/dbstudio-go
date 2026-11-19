@@ -14,6 +14,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -87,6 +88,9 @@ type Store struct {
 	active   string
 	hist     []HistoryEntry
 	keys     *keyring.Keyring
+	// loadFailed 记录启动时的配置解析失败：坏文件在用户手工处理前必须
+	// 被 save() 拒绝覆盖——否则一次无害的保存就把全部连接记录抹掉。
+	loadFailed bool
 }
 
 // NewStore returns a store backed by connections.json in the app's user data
@@ -124,6 +128,9 @@ func (s *Store) load() error {
 		Active string `json:"active"`
 	}
 	if err := json.Unmarshal(data, &f); err != nil {
+		s.mu.Lock()
+		s.loadFailed = true
+		s.mu.Unlock()
 		return err
 	}
 	// Passwords come back as they were saved: sealed values are opened here, so
@@ -194,6 +201,28 @@ func (s *Store) openSecret(value string) string {
 // a Conn. A password that fails to seal is stored empty rather than in the
 // clear — an unusable connection beats a leaked one.
 func (s *Store) save() error {
+	// Add/Update/Remove 在持有 s.mu 的状态下落盘——saveLocked 假定锁已被
+	// 持有，这里不能再次 Lock（sync.Mutex 不可重入，会直接死锁）。
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.saveLocked()
+}
+
+// saveLocked 是 save 的锁内实现：调用方必须已持有 s.mu。
+func (s *Store) saveLocked() error {
+	// 启动时解析失败的配置文件在用户手工修复前不可覆盖：当前的内存状态
+	// 不含旧连接（load 未成功），直接写 = 用一份空/新清单抹掉全部历史。
+	// 把坏文件复制留档（.corrupt），保存仍然失败——用户先看到问题。
+	broken := s.loadFailed
+	if broken {
+		// 留档用复制而非改名：坏文件必须留在原位让用户看见（改名后原路径
+		// 空了，用户反而找不到"坏掉的配置"长什么样）。
+		if raw, err := os.ReadFile(s.path); err == nil {
+			_ = os.WriteFile(s.path+".corrupt", raw, 0o600)
+		}
+		s.loadFailed = false // 已留档，不再反复阻塞
+		return fmt.Errorf("connections.json 解析失败，副本已存为 %s.corrupt——请手工修复原文件，或确认后重建连接", filepath.Base(s.path))
+	}
 	f := struct {
 		Conns  []Conn `json:"connections"`
 		Active string `json:"active"`
@@ -315,7 +344,7 @@ func (s *Store) Add(c Conn) error {
 	}
 	s.conns = append(s.conns, c)
 	s.active = c.Name
-	return s.save()
+	return s.saveLocked()
 }
 
 // Update replaces the connection of that name.
@@ -327,7 +356,7 @@ func (s *Store) Update(c Conn) error {
 		if e.Name == c.Name {
 			s.conns[i] = c
 			s.active = c.Name
-			return s.save()
+			return s.saveLocked()
 		}
 	}
 	return errors.New("connection not found")
@@ -362,7 +391,7 @@ func (s *Store) Remove(name string) error {
 			s.active = ""
 		}
 	}
-	return s.save()
+	return s.saveLocked()
 }
 
 // Active returns the active connection.

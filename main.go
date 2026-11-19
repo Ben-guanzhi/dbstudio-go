@@ -48,6 +48,9 @@ func main() {
 		}
 		if err := store.load(); err != nil {
 			log.Printf("loading connections: %v", err)
+			// 日志之外必须让用户看见：坏配置静默降级为空列表，用户不知情
+			// 就会开始重建，而首次保存曾被挡下（store.go 的 .corrupt 保护）。
+			app.errMsg = "连接配置解析失败：" + err.Error()
 		}
 		store.loadHistory()
 		app.store = store
