@@ -3,9 +3,10 @@ module dbstudio-go
 go 1.27.3
 
 require (
-	github.com/Ben-guanzhi/dbcore v0.18.1
+	github.com/Ben-guanzhi/dbcore v0.18.2
 	github.com/egoist/mygo v0.9.0
 	golang.org/x/crypto v0.59.0
+	golang.org/x/text v0.44.0
 )
 
 require (
@@ -27,7 +28,6 @@ require (
 	golang.org/x/net v0.63.0 // indirect
 	golang.org/x/sync v0.25.0 // indirect
 	golang.org/x/sys v0.50.0 // indirect
-	golang.org/x/text v0.44.0 // indirect
 	modernc.org/libc v1.73.4 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect

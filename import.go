@@ -79,7 +79,9 @@ func readImportFile(path string) (*importFile, error) {
 		return nil, err
 	}
 	defer f.Close()
-	return parseImport(f, sep, path)
+	// 中文 Windows 导出的 CSV 常带 UTF-8 BOM 或 GB18030 字节——先解码再解析，
+	// 否则首列名带 BOM、中文全乱码（§352）。
+	return parseImport(decodeImportBytes(f), sep, path)
 }
 
 // parseImport is readImportFile over any reader, which is what a test drives.
