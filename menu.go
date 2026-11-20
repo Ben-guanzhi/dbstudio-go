@@ -76,6 +76,8 @@ func (app *App) setMenu() {
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.openParams() }},
 			{Label: "Format SQL", Accelerator: "CmdOrCtrl+Shift+F",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.formatSQL() }},
+			{Label: "Toggle Comment", Accelerator: "CmdOrCtrl+/",
+				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.toggleComment() }},
 			mygo.Separator(),
 			{Label: "Commit Changes",
 				Click: func(it *mygo.MenuItem, w *mygo.Window) { app.commit() }},

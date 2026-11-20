@@ -41,6 +41,10 @@ func (app *App) view(c *ui.Context) {
 	if c.Shortcut(ui.Cmd, ui.KeyZ) {
 		app.rollback()
 	}
+	// Ctrl+/：光标行 "-- " 注释切换（DataGrip/TablePlus 标配，§347）。
+	if c.Shortcut(ui.Cmd, ui.KeySlash) {
+		app.toggleComment()
+	}
 	// F5 re-reads what is on screen: a browse's page, or the statement's result.
 	if c.Shortcut(0, ui.KeyF5) {
 		if app.result != nil && !app.busy {
