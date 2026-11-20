@@ -381,18 +381,17 @@ func (app *App) backupDB() {
 			useConn = tunneledConn(app.conn, fwd)
 		}
 
-		var args []string
-		if pg {
-			args = pgDumpArgs(useConn, outPath)
-		} else {
-			args = mysqlDumpArgs(useConn, outPath)
-		}
-		env := dumpToolEnv(useConn, pg)
-		if err := runDumpTool(ctx, tool, args, env, outPath); err != nil {
-			app.post(func() { app.errMsg = "Backup failed: " + err.Error(); app.status = "" })
-			return
-		}
-		if err := verifyDumpFile(outPath); err != nil {
+		// 原子备份（§348）：工具只写临时文件，成功校验后才 rename 到目标。
+		err = atomicWriteResult(outPath, func(tmp string) error {
+			var args []string
+			if pg {
+				args = pgDumpArgs(useConn, tmp)
+			} else {
+				args = mysqlDumpArgs(useConn, tmp)
+			}
+			return runDumpTool(ctx, tool, args, dumpToolEnv(useConn, pg), tmp)
+		})
+		if err != nil {
 			app.post(func() { app.errMsg = "Backup failed: " + err.Error(); app.status = "" })
 			return
 		}

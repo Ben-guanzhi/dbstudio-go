@@ -123,6 +123,26 @@ func dumpErrLine(s string) string {
 	return s
 }
 
+// atomicWriteResult 让外部 dump 工具先写 outPath+".tmp"，成功再 rename；
+// 失败清残片（§348 跨仓同款）：用户要么拿到完整备份，要么保留旧备份。
+func atomicWriteResult(outPath string, write func(tmp string) error) error {
+	tmpPath := outPath + ".tmp"
+	_ = os.Remove(tmpPath)
+	if err := write(tmpPath); err != nil {
+		_ = os.Remove(tmpPath)
+		return err
+	}
+	if err := verifyDumpFile(tmpPath); err != nil {
+		_ = os.Remove(tmpPath)
+		return err
+	}
+	if err := os.Rename(tmpPath, outPath); err != nil {
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("备份完成但无法写入目标: %w", err)
+	}
+	return nil
+}
+
 // verifyDumpFile 校验产物：存在、非空。空备份比没有备份更危险。
 func verifyDumpFile(path string) error {
 	info, err := os.Stat(path)
