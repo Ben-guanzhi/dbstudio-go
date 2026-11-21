@@ -20,11 +20,11 @@ func TestExtractParamsPositional(t *testing.T) {
 	if len(refs) != 2 {
 		t.Fatalf("refs = %d, want 2", len(refs))
 	}
-	if refs[0].index != 0 || refs[1].index != 1 {
-		t.Fatalf("indices = %d, %d, want 0, 1", refs[0].index, refs[1].index)
+	if refs[0].Index != 0 || refs[1].Index != 1 {
+		t.Fatalf("indices = %d, %d, want 0, 1", refs[0].Index, refs[1].Index)
 	}
-	if refs[0].start != 26 || refs[0].end != 27 {
-		t.Fatalf("first range = [%d, %d), want [26, 27)", refs[0].start, refs[0].end)
+	if refs[0].Start != 26 || refs[0].End != 27 {
+		t.Fatalf("first range = [%d, %d), want [26, 27)", refs[0].Start, refs[0].End)
 	}
 }
 
@@ -34,8 +34,8 @@ func TestExtractParamsDollarNumbered(t *testing.T) {
 	if len(refs) != 2 {
 		t.Fatalf("refs = %d, want 2", len(refs))
 	}
-	if refs[0].index != 1 || refs[1].index != 0 {
-		t.Fatalf("indices = %d, %d, want 1, 0 (self-indexing)", refs[0].index, refs[1].index)
+	if refs[0].Index != 1 || refs[1].Index != 0 {
+		t.Fatalf("indices = %d, %d, want 1, 0 (self-indexing)", refs[0].Index, refs[1].Index)
 	}
 }
 
@@ -45,13 +45,13 @@ func TestExtractParamsNamed(t *testing.T) {
 		t.Fatalf("refs = %d, want 3", len(refs))
 	}
 	// Reusing a name reuses its binding position.
-	if refs[0].name != "low" || refs[0].index != 0 {
+	if refs[0].Name != "low" || refs[0].Index != 0 {
 		t.Fatalf("first = %+v, want low@0", refs[0])
 	}
-	if refs[2].name != "low" || refs[2].index != 0 {
+	if refs[2].Name != "low" || refs[2].Index != 0 {
 		t.Fatalf("third = %+v, want low@0 again", refs[2])
 	}
-	if refs[1].name != "high" || refs[1].index != 1 {
+	if refs[1].Name != "high" || refs[1].Index != 1 {
 		t.Fatalf("second = %+v, want high@1", refs[1])
 	}
 }

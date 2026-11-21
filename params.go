@@ -21,127 +21,26 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-// paramRef is one placeholder occurrence: its byte range in the SQL, and the
-// positional index it takes (named placeholders map to their first appearance).
-type paramRef struct {
-	start, end int // [start, end) in the original text
-	index      int // 0-based position the value binds to
-	name       string
-}
+// paramRef is the kernel's sqltext.ParamRef (§382 收编：提取/重写纯函数
+// 归内核，本文件只剩面板与值收集）。
+type paramRef = sqltext.ParamRef
 
 // paramNames are the labels the panel shows: ":name" for named ones, the
 // marker itself for positional ones.
 func paramLabel(sqlText string, r paramRef) string {
-	if r.name != "" {
-		return r.name
+	if r.Name != "" {
+		return r.Name
 	}
-	return strconv.Itoa(r.index + 1)
+	return strconv.Itoa(r.Index + 1)
 }
 
-// extractParams lists the placeholders in sqlText in the order they bind:
-// `?` (positional), `$n` (positional), and `:name` (named, first use fixes its
-// index). Quoted strings and comments are skipped, and `::type` casts (PG) are
-// not parameters.
+// extractParams/rewriteParams 委托内核（§382）——语义与向量原样迁移。
 func extractParams(sqlText string) []paramRef {
-	var refs []paramRef
-	byName := map[string]int{}
-	n := len(sqlText)
-	for i := 0; i < n; {
-		c := sqlText[i]
-		switch {
-		case c == '\'' || c == '"':
-			// A string: skip it whole, doubled quotes included.
-			quote := c
-			j := i + 1
-			for j < n {
-				if sqlText[j] == quote {
-					if j+1 < n && sqlText[j+1] == quote {
-						j += 2
-						continue
-					}
-					j++
-					break
-				}
-				j++
-			}
-			i = j
-		case c == '-' && i+1 < n && sqlText[i+1] == '-':
-			j := strings.IndexByte(sqlText[i:], '\n')
-			if j < 0 {
-				i = n
-			} else {
-				i += j + 1
-			}
-		case c == '/' && i+1 < n && sqlText[i+1] == '*':
-			j := strings.Index(sqlText[i+2:], "*/")
-			if j < 0 {
-				i = n
-			} else {
-				i += 2 + j + 2
-			}
-		case c == '?' && (i == 0 || sqlText[i-1] != ':' && sqlText[i-1] != '$'):
-			refs = append(refs, paramRef{start: i, end: i + 1, index: len(refs)})
-			i++
-		case c == '$' && i+1 < n && isDigit(sqlText[i+1]):
-			j := i + 1
-			for j < n && isDigit(sqlText[j]) {
-				j++
-			}
-			num, _ := strconv.Atoi(sqlText[i+1 : j])
-			// $n is 1-based and self-indexing: $2 always binds the 2nd value.
-			idx := num - 1
-			if idx < 0 {
-				idx = len(refs)
-			}
-			refs = append(refs, paramRef{start: i, end: j, index: idx})
-			i = j
-		case c == ':' && i+1 < n && (isIdentStart(sqlText[i+1]) || sqlText[i+1] == ':'):
-			// ::type is a cast, not a parameter: step over both colons.
-			if sqlText[i+1] == ':' {
-				i += 2
-				continue
-			}
-			j := i + 1
-			for j < n && isIdentChar(sqlText[j]) {
-				j++
-			}
-			name := sqlText[i+1 : j]
-			idx, seen := byName[name]
-			if !seen {
-				idx = len(refs)
-				byName[name] = idx
-			}
-			refs = append(refs, paramRef{start: i, end: j, index: idx, name: name})
-			i = j
-		default:
-			i++
-		}
-	}
-	return refs
+	return sqltext.ExtractParams(sqlText)
 }
 
-func isDigit(b byte) bool { return b >= '0' && b <= '9' }
-func isIdentStart(b byte) bool {
-	return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || b == '_'
-}
-func isIdentChar(b byte) bool { return isIdentStart(b) || isDigit(b) }
-
-// rewriteParams replaces every placeholder with the target engine's own marker,
-// in binding order. A statement already written in the engine's style comes
-// back unchanged except for the whitespace, which is left alone.
 func rewriteParams(sqlText string, refs []paramRef, dbType string) (string, error) {
-	if len(refs) == 0 {
-		return sqlText, nil
-	}
-	var b strings.Builder
-	prev := 0
-	for _, r := range refs {
-		b.WriteString(sqlText[prev:r.start])
-		b.WriteString(sqltext.Placeholder(dbType, r.index+1))
-		prev = r.end
-	}
-	b.WriteString(sqlText[prev:])
-	return b.String(), nil
+	return sqltext.RewritePlaceholders(sqlText, refs, dbType), nil
 }
 
 // The panel's state: the statement it parameterizes, its parameters in binding
@@ -188,15 +87,15 @@ func (app *App) openParams() {
 	// The panel's slots: one per binding position.
 	positions := 0
 	for _, r := range refs {
-		if r.index >= positions {
-			positions = r.index + 1
+		if r.Index >= positions {
+			positions = r.Index + 1
 		}
 	}
 	labels := make([]string, positions)
 	values := make([]string, positions)
 	for _, r := range refs {
-		if labels[r.index] == "" {
-			labels[r.index] = paramLabel(sql, r)
+		if labels[r.Index] == "" {
+			labels[r.Index] = paramLabel(sql, r)
 		}
 	}
 	for i := range labels {

@@ -3,7 +3,7 @@ module dbstudio-go
 go 1.27.3
 
 require (
-	github.com/Ben-guanzhi/dbcore v0.18.4
+	github.com/Ben-guanzhi/dbcore v0.18.5
 	github.com/egoist/mygo v0.9.0
 	golang.org/x/crypto v0.59.0
 	golang.org/x/text v0.44.0

@@ -172,16 +172,16 @@ func paramItems(clean string, head, start int) []editor.Completion {
 	var set itemSet
 	seen := map[string]bool{}
 	for _, r := range extractParams(clean) {
-		if r.name == "" || seen[r.name] {
+		if r.Name == "" || seen[r.Name] {
 			continue
 		}
-		seen[r.name] = true
-		if typed != "" && !strings.HasPrefix(r.name, typed) {
+		seen[r.Name] = true
+		if typed != "" && !strings.HasPrefix(r.Name, typed) {
 			continue
 		}
 		set.add(editor.Completion{
-			Label:  string(marker) + r.name,
-			Insert: string(marker) + r.name,
+			Label:  string(marker) + r.Name,
+			Insert: string(marker) + r.Name,
 			Kind:   editor.CompletionVariable,
 			Detail: "参数",
 		})
